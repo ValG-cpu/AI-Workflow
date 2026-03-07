@@ -1,0 +1,90 @@
+{
+  "name": "Test workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "05dac231-1d62-470b-bf19-743aecddb672",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://httpbin.org/get",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "3b0bd22b-a08c-4187-9c3f-aa2607118781",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d2b159bf-25a4-4430-8dc5-93d7ce7179db",
+              "name": "user_agent",
+              "value": "={{$json[\"headers\"][\"User-Agent\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8e60c26b-41be-48a0-aa2c-b6ae3dadfe72",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9a1a35f7-7c60-4902-98c7-213baf1e6703",
+  "meta": {
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "6EDuLcRucfquXJRc",
+  "tags": []
+}
