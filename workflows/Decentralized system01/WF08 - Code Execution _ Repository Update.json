@@ -1,0 +1,295 @@
+{
+  "name": "WF08 - Code Execution / Repository Update",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "863ca838-44c9-497d-9e7e-eefd6831f1ab",
+              "name": "analysis_scope",
+              "value": "code_execution",
+              "type": "string"
+            },
+            {
+              "id": "e1d69c5a-0447-49db-9c8d-a0a7736bac78",
+              "name": "ready_for_repository_update",
+              "value": "={{$json.wf04_qa_tests.ready_for_ci_cd}}",
+              "type": "boolean"
+            },
+            {
+              "id": "cb5b2695-0ecd-4798-bf87-6f2d5bf7b229",
+              "name": "execution_context",
+              "value": "={{`Project: ${$json.project}\nWork item ID: ${$json.work_item_id}\nTitle: ${$json.title}\n\nRepository:\n${$json.repository || \"\"}\n\nTarget branch:\n${$json.branch || \"main\"}\n\nRequirement analysis:\n${JSON.stringify($json.wf01_requirement_analysis || {}, null, 2)}\n\nTechnical breakdown:\n${JSON.stringify($json.wf02_technical_breakdown || {}, null, 2)}\n\nCode assistance:\n${JSON.stringify($json.wf03_code_assistance || {}, null, 2)}\n\nQA tests:\n${JSON.stringify($json.wf04_qa_tests || {}, null, 2)}`}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        352
+      ],
+      "id": "bd77b079-2132-4805-8de4-0951b55b2e1d",
+      "name": "Set - Prepare Execution Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2e9df7aa-1dd8-4472-9db0-040cad957bc4",
+              "leftValue": "={{$json.ready_for_repository_update}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        352
+      ],
+      "id": "fdf6b85c-ce72-49dd-abf2-522a5d72fe0b",
+      "name": "IF - Ready For Repository Update"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a repository update proposal based on the following execution context.\n\nThe output must contain concrete file changes that could be applied to a repository by an execution workflow.\n\nRules:\n- Do not delete files.\n- Do not modify production configuration unless explicitly required.\n- Prefer small, reviewable changes.\n- Include tests when relevant.\n- Every file change must include a path, action and content.\n- If the application stack is unclear, generate a minimal runnable example.\n\nReturn ONLY valid JSON with this structure:\n\n{\n  \"wf08_repository_update\": {\n    \"update_strategy\": \"\",\n    \"target_branch\": \"\",\n    \"file_changes\": [\n      {\n        \"path\": \"\",\n        \"action\": \"create | update\",\n        \"content\": \"\",\n        \"reason\": \"\"\n      }\n    ],\n    \"test_files\": [\n      {\n        \"path\": \"\",\n        \"action\": \"create | update\",\n        \"content\": \"\",\n        \"reason\": \"\"\n      }\n    ],\n    \"commands_to_run\": [],\n    \"commit_message\": \"\",\n    \"pull_request_title\": \"\",\n    \"pull_request_description\": \"\",\n    \"repository_update_ready\": true,\n    \"human_validation_required\": true\n  }\n}\n\nEach file must be a complete, runnable file.\nDo not generate partial snippets.\n\nExecution context:\n{{$json.execution_context}}",
+        "options": {
+          "systemMessage": "You are a senior software engineer working in an AI software factory.\n\nYour role is to convert validated implementation and QA plans into concrete repository file changes.\n\nYou must not claim that changes were applied.\nYou only generate a structured repository update proposal.\n\nReturn ONLY valid JSON. No markdown. No explanation."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        944,
+        96
+      ],
+      "id": "1a376b31-7cbe-4cf4-a2c3-6b0880adadcf",
+      "name": "AI Agent - File Change Generator"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        368
+      ],
+      "id": "51351079-6c5c-4080-a402-92a9bccdff33",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qb3hMgLKJ6BfF5wu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const originalInput = $('Set - Prepare Execution Context').item.json;\nconst current = $input.item.json;\n\nlet aiOutput =\n  current.output ||\n  current.text ||\n  current.message ||\n  current.content ||\n  current.data ||\n  current;\n\nif (typeof aiOutput === 'string') {\n  aiOutput = aiOutput\n    .replace(/```json/g, '')\n    .replace(/```/g, '')\n    .trim();\n\n  try {\n    aiOutput = JSON.parse(aiOutput);\n  } catch (error) {\n    aiOutput = {\n      wf08_repository_update: {\n        update_strategy: 'AI output could not be parsed as valid JSON.',\n        target_branch: originalInput.branch || 'main',\n        file_changes: [],\n        test_files: [],\n        commands_to_run: [],\n        commit_message: '',\n        pull_request_title: '',\n        pull_request_description: '',\n        repository_update_ready: false,\n        human_validation_required: true\n      }\n    };\n  }\n}\n\nconst update = aiOutput.wf08_repository_update || aiOutput;\n\nreturn {\n  json: {\n    ...originalInput,\n    wf08_repository_update: {\n      update_strategy: update.update_strategy || '',\n      target_branch: update.target_branch || originalInput.branch || 'main',\n      file_changes: Array.isArray(update.file_changes) ? update.file_changes : [],\n      test_files: Array.isArray(update.test_files) ? update.test_files : [],\n      commands_to_run: Array.isArray(update.commands_to_run) ? update.commands_to_run : [],\n      commit_message: update.commit_message || '',\n      pull_request_title: update.pull_request_title || '',\n      pull_request_description: update.pull_request_description || '',\n      repository_update_ready: Boolean(update.repository_update_ready),\n      human_validation_required: true\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        96
+      ],
+      "id": "9c19a5d7-c527-4cb4-bcff-c9c48f959b1f",
+      "name": "Code - Normalize Repository Update"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5a2eb10a-0ffb-443f-aa92-85a0d64a8457",
+              "name": "wf08_status",
+              "value": "proposal_ready",
+              "type": "string"
+            },
+            {
+              "id": "2dbaeb23-e96b-4525-81e0-23d1516441ba",
+              "name": "next_recommended_workflow",
+              "value": "={{$json.wf08_repository_update.repository_update_ready ? \"WF05 - CI CD\" : \"WF07 - Industrial Report\"}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        96
+      ],
+      "id": "bf8bd211-b6f5-432a-9602-fb5930e64644",
+      "name": "Set - Repository Update Proposal"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85abe2c5-ede9-40b6-8ab4-1e85108b9d11",
+              "name": "wf08_status",
+              "value": "blocked",
+              "type": "string"
+            },
+            {
+              "id": "4c625463-be2e-4f8a-befd-e91fff5a8902",
+              "name": "wf08_repository_update",
+              "value": "={{\n{\n  update_strategy: \"Repository update cannot be prepared because QA is not ready for CI/CD.\",\n  target_branch: $json.branch || \"main\",\n  file_changes: [],\n  test_files: [],\n  commands_to_run: [],\n  commit_message: \"\",\n  pull_request_title: \"\",\n  pull_request_description: \"\",\n  repository_update_ready: false,\n  human_validation_required: true\n}\n}}",
+              "type": "object"
+            },
+            {
+              "id": "4008ec4a-9d46-4e88-879f-1172b921edc4",
+              "name": "next_recommended_workflow",
+              "value": "WF07 - Industrial Report",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        608
+      ],
+      "id": "9fc271bb-41f4-496a-b5f4-56e32a523b2d",
+      "name": "Set - Blocked Repository Update"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set - Prepare Execution Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - Prepare Execution Context": {
+      "main": [
+        [
+          {
+            "node": "IF - Ready For Repository Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Ready For Repository Update": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - File Change Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set - Blocked Repository Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - File Change Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - File Change Generator": {
+      "main": [
+        [
+          {
+            "node": "Code - Normalize Repository Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Normalize Repository Update": {
+      "main": [
+        [
+          {
+            "node": "Set - Repository Update Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b991b288-9630-4a18-8898-3fb4f918c142",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "eAAx7oxkyZUTzamr",
+  "tags": []
+}
