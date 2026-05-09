@@ -11,6 +11,7 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=password
+      - NODE_FUNCTION_ALLOW_BUILTIN=fs,path
 
     volumes:
       - ./n8n_data:/home/node/.n8n
