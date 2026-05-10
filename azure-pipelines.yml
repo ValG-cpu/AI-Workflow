@@ -1,0 +1,27 @@
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.11'
+
+  - script: |
+      python -m pip install --upgrade pip
+
+      if [ -f product-app/requirements.txt ]; then
+        pip install -r product-app/requirements.txt
+      fi
+
+      pip install pytest
+    displayName: Install dependencies
+
+  - script: |
+      pytest product-app/tests
+    displayName: Run tests
