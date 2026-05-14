@@ -1,0 +1,639 @@
+{
+  "name": "WF02 - Technical Design",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d673c843-f101-499e-b7ce-7d1a201517d4",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b774b916-5a87-4429-966a-05e0d46125cc",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "dffcee65-ae05-45ec-94fd-d1436e99911d",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "33b0421c-e804-49c7-a2b3-177ee3570b8f",
+              "name": "work_item_id",
+              "value": "={{ $json.payload.ado.work_item_id }}",
+              "type": "number"
+            },
+            {
+              "id": "dd6442d8-9996-4372-846c-f89aa7811488",
+              "name": "title",
+              "value": "={{ $json.payload.ado.title }}",
+              "type": "string"
+            },
+            {
+              "id": "f8973799-ebe2-486a-8842-c6edd908f337",
+              "name": "description",
+              "value": "={{ $json.payload.ado.description }}",
+              "type": "string"
+            },
+            {
+              "id": "027b77dd-0af3-4898-bd53-3a5e97b97033",
+              "name": "acceptance_criteria",
+              "value": "={{ $json.payload.ado.acceptance_criteria }}",
+              "type": "string"
+            },
+            {
+              "id": "5c4d2be9-b77a-4963-8625-13ba377cf496",
+              "name": "requirement_analysis",
+              "value": "={{ $json.payload.requirement_analysis }}",
+              "type": "object"
+            },
+            {
+              "id": "61178143-d953-4c13-a8cc-877fc405225c",
+              "name": "quality_gate",
+              "value": "={{ $json.payload.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2078983a-0f70-4858-9d5a-377193f000bf",
+      "name": "01 - Extract WF01 Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst qualityGate = input.quality_gate || {};\nconst requirementAnalysis = input.requirement_analysis || {};\n\nconst passed =\n  qualityGate.passed === true &&\n  requirementAnalysis.is_ready_for_design === true;\n\nif (!passed) {\n  return [\n    {\n      json: {\n        ...input,\n        wf02_validation: {\n          passed: false,\n          reason: \"WF01 quality gate did not pass\"\n        },\n        current_workflow: \"WF02\",\n        next_workflow: \"WF08\",\n        status: \"BLOCKED\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf02_validation: {\n        passed: true\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "b6d048cb-bc07-46c7-b4db-21fb7cd9c5ce",
+      "name": "02 - Validate WF01 Approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1280cf6c-362c-43a2-a285-5a0ab1464f8e",
+              "leftValue": "={{ $json.wf02_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "d275094f-34ad-49e1-91f1-21f71ad20ece",
+      "name": "03 - IF WF01 Approved?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Analyze this User Story and produce a minimal technical design.\n\nTitle:\n{{ $json.title }}\n\nDescription:\n{{ $json.description }}\n\nAcceptance Criteria:\n{{ $json.acceptance_criteria }}\n\nProject goal:\nMinimal local Python macro calculator.\n\nAllowed scope:\n- simple Python functions\n- pytest\n- local invented nutrition data\n\nAllowed files:\n- macro_calculator.py\n- sample_data.py\n- tests/test_macro_calculator.py\n- requirements.txt\n\nForbidden:\n- FastAPI\n- APIs\n- users\n- auth\n- database\n- SQLAlchemy\n- Docker\n- frontend\n- microservices\n\nReturn ONLY valid JSON.\n\nSchema:\n\n{\n  \"technical_design\": {\n    \"architecture_summary\": \"string\",\n    \"project_structure\": [\"string\"],\n    \"components\": [\"string\"],\n    \"api_endpoints\": [\"No API endpoints required\"],\n    \"services\": [\"No services required\"],\n    \"database_requirements\": [\"No database required\"],\n    \"docker_requirements\": [\"No Docker required\"],\n    \"ci_cd_requirements\": [\"Run pytest only\"],\n    \"testing_strategy\": [\"string\"],\n    \"dependencies\": [\"pytest\"],\n    \"technical_risks\": [\"No major technical risk\"],\n    \"implementation_notes\": [\"string\"]\n  },\n  \"quality_gate\": {\n    \"passed\": true,\n    \"blocking_issues\": [],\n    \"recommendation\": \"CONTINUE\"\n  },\n  \"next_workflow\": \"WF03\"\n}",
+        "options": {
+          "systemMessage": "=You are a senior software architect inside an AI Software Factory.\n\nApplication scope:\nMinimal local Python macro calculator.\n\nAllowed:\n- simple Python functions\n- pytest\n- local invented nutrition data\n\nForbidden:\n- FastAPI\n- APIs\n- users\n- authentication\n- database\n- SQLAlchemy\n- Docker\n- frontend\n- microservices\n\nAllowed files:\n- macro_calculator.py\n- sample_data.py\n- tests/test_macro_calculator.py\n- requirements.txt\n\nCritical JSON rules:\n- Return ONLY valid JSON\n- No markdown\n- No explanations\n- No comments\n- No trailing commas\n- Arrays must contain strings only\n- Output must be parseable by JSON.parse()\n\nYou must never change the workflow payload structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "66376cac-27e6-448e-a50d-c9678f812e13",
+      "name": "04 - AI Technical Architect"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "db4810ea-b76c-4e27-98f6-758588375438",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "ff88e10d-bb13-40cb-9a54-e2007a018c3e",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "3a15c945-c99d-49dc-bba9-158cc2d6ddcf",
+              "name": "current_workflow",
+              "value": "WF02",
+              "type": "string"
+            },
+            {
+              "id": "4bea48e1-5091-4018-aea6-cd2080c0b727",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "a1f9ec24-1941-496f-8283-d8de556710a9",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "51366f65-daee-45c7-a65e-e014df74c9e1",
+              "name": "quality_gate",
+              "value": "={{ $json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        192
+      ],
+      "id": "843e21a9-fd14-472c-85d9-52a67a523f68",
+      "name": "04B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet raw =\n  input.output ||\n  input.text ||\n  input.response ||\n  input.content ||\n  input.message ||\n  input.data;\n\nif (!raw && input.messages?.length) {\n  raw = input.messages[0]?.content;\n}\n\nif (!raw) {\n  return [\n    {\n      json: {\n        ...input,\n        wf02_result: {\n          technical_design: {\n  architecture_summary: \"INVALID\",\n  project_structure: [\"UNDEFINED\"],\n  components: [\"UNDEFINED\"],\n  api_endpoints: [\"UNDEFINED\"],\n  services: [\"UNDEFINED\"],\n  database_requirements: [\"UNDEFINED\"],\n  docker_requirements: [\"UNDEFINED\"],\n  ci_cd_requirements: [\"UNDEFINED\"],\n  testing_strategy: [\"UNDEFINED\"],\n  dependencies: [\"UNDEFINED\"],\n  technical_risks: [\"UNDEFINED\"],\n  implementation_notes: [\"UNDEFINED\"]\n},\n          quality_gate: {\n            passed: false,\n            blocking_issues: [\"No AI output found\"],\n            recommendation: \"HUMAN_REVIEW\"\n          },\n          next_workflow: \"WF08\"\n        }\n      }\n    }\n  ];\n}\n\nif (typeof raw !== \"string\") {\n  raw = JSON.stringify(raw);\n}\n\nraw = raw\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .replace(/\\/\\/.*$/gm, \"\")\n  .trim();\n\nconst firstBrace = raw.indexOf(\"{\");\nconst lastBrace = raw.lastIndexOf(\"}\");\n\nif (firstBrace === -1 || lastBrace === -1) {\n  return [\n    {\n      json: {\n        ...input,\n        wf02_result: {\n          technical_design: {\n  architecture_summary: \"INVALID\",\n  project_structure: [\"UNDEFINED\"],\n  components: [\"UNDEFINED\"],\n  api_endpoints: [\"UNDEFINED\"],\n  services: [\"UNDEFINED\"],\n  database_requirements: [\"UNDEFINED\"],\n  docker_requirements: [\"UNDEFINED\"],\n  ci_cd_requirements: [\"UNDEFINED\"],\n  testing_strategy: [\"UNDEFINED\"],\n  dependencies: [\"UNDEFINED\"],\n  technical_risks: [\"UNDEFINED\"],\n  implementation_notes: [\"UNDEFINED\"]\n},\n          quality_gate: {\n            passed: false,\n            blocking_issues: [\"Invalid AI JSON\"],\n            recommendation: \"HUMAN_REVIEW\"\n          },\n          next_workflow: \"WF08\"\n        }\n      }\n    }\n  ];\n}\n\nconst jsonString =\n  raw.slice(firstBrace, lastBrace + 1);\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(jsonString);\n}\ncatch (error) {\n  return [\n    {\n      json: {\n        ...input,\n        wf02_result: {\n          technical_design: {\n  architecture_summary: \"INVALID\",\n  project_structure: [\"UNDEFINED\"],\n  components: [\"UNDEFINED\"],\n  api_endpoints: [\"UNDEFINED\"],\n  services: [\"UNDEFINED\"],\n  database_requirements: [\"UNDEFINED\"],\n  docker_requirements: [\"UNDEFINED\"],\n  ci_cd_requirements: [\"UNDEFINED\"],\n  testing_strategy: [\"UNDEFINED\"],\n  dependencies: [\"UNDEFINED\"],\n  technical_risks: [\"UNDEFINED\"],\n  implementation_notes: [\"UNDEFINED\"]\n},\n          quality_gate: {\n            passed: false,\n            blocking_issues: [error.message],\n            recommendation: \"HUMAN_REVIEW\"\n          },\n          next_workflow: \"WF08\"\n        }\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf02_result: parsed\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        -96
+      ],
+      "id": "a73d54ac-9466-4d5f-b319-b428322551ca",
+      "name": "05 - Parse AI Architecture"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst original =\n  $('01 - Extract WF01 Payload').item.json;\n\nconst payload = original.payload;\n\nconst result = input.wf02_result;\n\nconst nextWorkflow =\n  result.quality_gate?.passed === true\n    ? \"WF03\"\n    : \"WF08\";\n\nconst updatedPayload = {\n  ...payload,\n\n  factory: {\n    ...payload.factory,\n    current_workflow: \"WF02\",\n    next_workflow: nextWorkflow,\n    status:\n      nextWorkflow === \"WF03\"\n        ? \"RUNNING\"\n        : \"BLOCKED\",\n\n    workflow_history: [\n      ...(payload.factory.workflow_history || []),\n      \"WF02\"\n    ]\n  },\n\n  technical_design: result.technical_design,\n\n  quality_gate: result.quality_gate,\n\n  artifacts: [\n    ...(payload.artifacts || []),\n\n    {\n      workflow: \"WF02\",\n      type: \"technical_design\",\n      name: \"technical_design.json\",\n      content: result.technical_design\n    }\n  ]\n};\n\nreturn [\n  {\n    json: {\n      execution_id: original.execution_id,\n      payload: updatedPayload,\n      current_workflow: \"WF02\",\n      next_workflow: nextWorkflow,\n      status: updatedPayload.factory.status,\n      quality_gate: result.quality_gate\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -96
+      ],
+      "id": "d1235295-c087-4a66-9319-4360f9a9200e",
+      "name": "06 - Prepare WF03 Payload"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        64
+      ],
+      "id": "fed82878-4876-41c8-a866-5e2ee5139580",
+      "name": "07 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea6fe184-8701-4633-8739-9cca25a23d3c",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f2d002b8-ca97-4162-b907-5e54e3bd455c",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "414b1c02-b62b-4d20-8ba5-64312fdd0b25",
+              "name": "current_workflow",
+              "value": "WF02",
+              "type": "string"
+            },
+            {
+              "id": "d9ac378c-419a-4662-98f1-795a8fdfba6a",
+              "name": "next_workflow",
+              "value": "={{ $json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "0e530c8e-4fdd-42be-acab-72de21310e11",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6c818047-8515-4c00-8440-1f7d7a95fb0c",
+              "name": "quality_gate",
+              "value": "={{ $json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        64
+      ],
+      "id": "b25f20af-9d5e-4861-9e84-85fb6c82b932",
+      "name": "08 - Return WF02 Result"
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5-coder:7b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        832,
+        48
+      ],
+      "id": "b88b4dbc-b957-4de1-8e20-8f8f55722dd9",
+      "name": "Ollama Chat Model (Qwen)",
+      "credentials": {
+        "ollamaApi": {
+          "id": "p0mzco8CfGCSmy9I",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "db806f1a-970f-44f0-925e-98f81b2c9e79",
+              "name": "execution_id",
+              "value": "={{ $('06 - Prepare WF03 Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "183b226f-1227-45c3-a123-40b59c34ac5c",
+              "name": "payload",
+              "value": "={{ $('06 - Prepare WF03 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "56f5c0cb-0f34-497b-9534-95025b5ab577",
+              "name": "current_workflow",
+              "value": "WF02",
+              "type": "string"
+            },
+            {
+              "id": "b3627b39-f1cd-4527-b19b-15529522b28a",
+              "name": "next_workflow",
+              "value": "={{ $('06 - Prepare WF03 Payload').item.json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "59c2cdf0-7456-4582-9e0e-68b947f8f0e5",
+              "name": "status",
+              "value": "={{ $('06 - Prepare WF03 Payload').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "2abfe70d-ff5f-46f3-b736-97d2ac91997c",
+              "name": "quality_gate",
+              "value": "={{ $('06 - Prepare WF03 Payload').item.json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        64
+      ],
+      "id": "c40a1752-2c3f-4172-bae9-8a83753cf1a3",
+      "name": "07B - Restore WF02 Payload"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract WF01 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract WF01 Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate WF01 Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate WF01 Approval": {
+      "main": [
+        [
+          {
+            "node": "03 - IF WF01 Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - IF WF01 Approved?": {
+      "main": [
+        [
+          {
+            "node": "04 - AI Technical Architect",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - AI Technical Architect": {
+      "main": [
+        [
+          {
+            "node": "05 - Parse AI Architecture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Parse AI Architecture": {
+      "main": [
+        [
+          {
+            "node": "06 - Prepare WF03 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Prepare WF03 Payload": {
+      "main": [
+        [
+          {
+            "node": "07 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "07B - Restore WF02 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "07 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model (Qwen)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "04 - AI Technical Architect",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07B - Restore WF02 Payload": {
+      "main": [
+        [
+          {
+            "node": "08 - Return WF02 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1c4865c3-c03e-4701-b93c-08dd1f9ae98a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "BC3oV59wb4VPDTCd",
+  "tags": []
+}

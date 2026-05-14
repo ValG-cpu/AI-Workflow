@@ -1,0 +1,675 @@
+{
+  "name": "WF04 - Code Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b774b916-5a87-4429-966a-05e0d46125cc",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "dffcee65-ae05-45ec-94fd-d1436e99911d",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "dd6442d8-9996-4372-846c-f89aa7811488",
+              "name": "title",
+              "value": "={{ $json.payload.ado.title }}",
+              "type": "string"
+            },
+            {
+              "id": "f8973799-ebe2-486a-8842-c6edd908f337",
+              "name": "description",
+              "value": "={{ $json.payload.ado.description }}",
+              "type": "string"
+            },
+            {
+              "id": "027b77dd-0af3-4898-bd53-3a5e97b97033",
+              "name": "acceptance_criteria",
+              "value": "={{ $json.payload.ado.acceptance_criteria }}",
+              "type": "string"
+            },
+            {
+              "id": "5c4d2be9-b77a-4963-8625-13ba377cf496",
+              "name": "requirement_analysis",
+              "value": "={{ $json.payload.requirement_analysis }}",
+              "type": "object"
+            },
+            {
+              "id": "61178143-d953-4c13-a8cc-877fc405225c",
+              "name": "technical_design",
+              "value": "={{ $json.payload.technical_design }}",
+              "type": "object"
+            },
+            {
+              "id": "1e5cd661-5d75-4f71-8951-76080b39c791",
+              "name": "tdd_test_design",
+              "value": "={{ $json.payload.tdd_test_design }}",
+              "type": "object"
+            },
+            {
+              "id": "79cbc522-b129-4dbc-9ed3-d1315844b3b9",
+              "name": "quality_gate",
+              "value": "={{ $json.payload.quality_gate }}",
+              "type": "object"
+            },
+            {
+              "id": "17191c77-1a36-4e27-aa54-070b6b0c7b02",
+              "name": "repository_context",
+              "value": "={{ $json.payload.repository_context }}",
+              "type": "object"
+            },
+            {
+              "id": "1b4e29f6-167f-46a4-9d23-f6b9dbeb3a34",
+              "name": "repository_summary",
+              "value": "={{ $json.payload.repository_summary }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "bfc19ab0-daea-40eb-8c86-807377c6d88e",
+      "name": "01 - Extract WF03 Payload"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c5ab3b20-ce37-4fff-9ea3-dd03605a18c9",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst missing = [];\n\nif (!input.execution_id) {\n  missing.push(\"execution_id\");\n}\n\nif (!input.payload) {\n  missing.push(\"payload\");\n}\n\nif (!input.technical_design) {\n  missing.push(\"technical_design\");\n}\n\nif (!input.tdd_test_design) {\n  missing.push(\"tdd_test_design\");\n}\n\nif (!input.tdd_test_design?.unit_tests) {\n  missing.push(\"tdd_test_design.unit_tests\");\n}\n\nif (!input.tdd_test_design?.api_tests) {\n  missing.push(\"tdd_test_design.api_tests\");\n}\n\nif (!input.tdd_test_design?.pytest_files) {\n  missing.push(\"tdd_test_design.pytest_files\");\n}\n\nif (missing.length > 0) {\n  return [\n    {\n      json: {\n        ...input,\n        wf04_validation: {\n          passed: false,\n          missing_fields: missing,\n          reason: \"TDD test design is incomplete\"\n        },\n        current_workflow: \"WF04\",\n        next_workflow: \"WF08\",\n        status: \"BLOCKED\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf04_validation: {\n        passed: true,\n        missing_fields: []\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "76e9a857-087b-4b69-b26e-6e73a025af27",
+      "name": "02 - Validate TDD Design"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a8299547-a3b9-4a75-b73e-f27de8d0d69d",
+              "leftValue": "={{ $json.wf04_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "063e46f5-e668-4e58-b19d-b1eed6f8b5bb",
+      "name": "03 - IF TDD Design Valid?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Generate the required repository changes for this feature.\n\nTitle:\n{{ $json.title }}\n\nDescription:\n{{ $json.description }}\n\nAcceptance Criteria:\n{{ $json.acceptance_criteria }}\n\nTechnical Design:\n{{ JSON.stringify($json.technical_design) }}\n\nTDD Test Design:\n{{ JSON.stringify($json.tdd_test_design) }}\n\nRepository Summary:\n{{ $json.repository_summary }}\n\nRepository Context:\n{{ JSON.stringify($json.repository_context) }}\n\nReturn this exact JSON structure:\n\n{\n  \"code_generation\": {\n    \"summary\": \"\",\n    \"runtime\": \"python\",\n    \"framework\": \"none\",\n    \"test_framework\": \"pytest\",\n    \"entrypoint\": \"macro_calculator.py\",\n    \"run_commands\": [\"python macro_calculator.py\"],\n    \"test_commands\": [\"pytest tests\"],\n    \"docker_commands\": [\"No Docker required\"]\n  },\n  \"files\": [\n    {\n      \"path\": \"\",\n      \"content\": \"\"\n    }\n  ],\n  \"quality_gate\": {\n    \"passed\": true,\n    \"blocking_issues\": [],\n    \"recommendation\": \"CONTINUE\"\n  },\n  \"next_workflow\": \"WF05\"\n}\n\nThe generated repository files must contain valid executable multiline Python code.\nDo not generate compressed one-line code.\nDo not place code after comments on the same line.",
+        "options": {
+          "systemMessage": "=You are a senior Python engineer.\n\nApplication scope:\nMinimal local Python macro calculator.\n\nAllowed files:\n- macro_calculator.py\n- sample_data.py\n- tests/test_macro_calculator.py\n- requirements.txt\n\nAllowed dependency:\n- pytest\n\nForbidden:\n- FastAPI\n- APIs\n- users\n- auth\n- database\n- SQLAlchemy\n- Docker\n- frontend\n- services\n- routers\n\nRules:\n- Keep implementation extremely small\n- Prefer one Python module\n- Generate deterministic code only\n- Generate pytest tests alongside implementation\n- Return paths relative to product-app\n- Never include product-app/ in file paths\n\nCritical JSON rules:\n- Return ONLY valid JSON\n- No markdown\n- No comments\n- No trailing commas\n- All file content must be escaped JSON strings\n- Output must be parseable by JSON.parse()\n\nYou must never change the workflow payload structure.\n\nCRITICAL FILE CONTENT RULES:\n\n- File contents must contain real multiline code.\n- Never compress Python code into one line.\n- Never prefix code with file path comments.\n- Use proper Python indentation.\n- Every import must be on its own line.\n- Every function definition must start on its own line.\n- Every pytest test function must start on its own line.\n- Use escaped newline characters correctly inside JSON strings.\n- Generated code must be directly executable after file write.\n\nInside JSON strings, preserve newline characters exactly as valid escaped JSON newlines.\n\nExample valid content:\n\"content\":\"def add(a, b):\\n    return a + b\"\n\nNever flatten multiline Python code into one line."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "61cd9a16-28ab-443b-8c7d-e22e812ba860",
+      "name": "04 - AI Code Generator"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0de72aa-d6af-4cc2-b2ba-a7065ef62ee8",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "202ac92a-4358-4b72-8059-3ae4c2c38142",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "16872f4e-9742-446c-adfc-5887d9c80dec",
+              "name": "current_workflow",
+              "value": "WF04",
+              "type": "string"
+            },
+            {
+              "id": "20a65c9c-4518-4b09-ba6d-4da874f54eab",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "6a4f0e71-e80e-4a61-91f7-65005a6c03f0",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "dca228ed-bbce-4a62-a4cf-da75057e5cd8",
+              "name": "quality_gate",
+              "value": "={\n  \"passed\": false,\n  \"blocking_issues\": [\"TDD design incomplete or invalid\"],\n  \"recommendation\": \"HUMAN_REVIEW\"\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        224
+      ],
+      "id": "d97b36d8-bcd1-494b-a866-0cfe114bb00e",
+      "name": "04B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet raw =\n  input.output ||\n  input.text ||\n  input.response ||\n  input.content ||\n  input.message ||\n  input.data;\n\nif (!raw) {\n  throw new Error(\"No AI output found\");\n}\n\nif (typeof raw !== \"string\") {\n  raw = JSON.stringify(raw);\n}\n\nraw = raw\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .replace(/,\\s*}/g, \"}\")\n  .replace(/,\\s*]/g, \"]\")\n  .trim();\n\nconst firstBrace = raw.indexOf(\"{\");\nconst lastBrace = raw.lastIndexOf(\"}\");\n\nif (firstBrace === -1 || lastBrace === -1) {\n  throw new Error(\"No valid JSON object found\");\n}\n\nconst jsonString =\n  raw.slice(firstBrace, lastBrace + 1);\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(jsonString);\n}\ncatch (err) {\n  throw new Error(\n    \"Failed to parse AI JSON output: \" + err.message\n  );\n}\n\nif (!Array.isArray(parsed.files)) {\n  throw new Error(\n    \"Generated output missing files array\"\n  );\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf04_result: parsed\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -96
+      ],
+      "id": "77fe015b-d440-43da-8826-41c07375d333",
+      "name": "05 - Parse Generated Files"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst result = input.wf04_result || {};\n\nconst rawFiles = result.files || [];\n\nconst normalizePath = path => {\n  return String(path || \"\")\n    .replace(/\\\\/g, \"/\")\n    .replace(/^\\/+/, \"\")\n    .replace(/^.*ai_factory_workspace\\/[^/]+\\//, \"\")\n    .replace(/^product-app\\//, \"\")\n    .replace(/^\\.?\\//, \"\");\n};\n\nconst normalizeContent = content => {\n  if (typeof content !== \"string\") {\n    return content;\n  }\n\n  return content\n    .replace(/\\\\r\\\\n/g, \"\\n\")\n    .replace(/\\\\n/g, \"\\n\")\n    .replace(/\\\\t/g, \"\\t\");\n};\n\nconst normalizedFiles = rawFiles.map(file => {\n  return {\n    ...file,\n    path: normalizePath(file.path),\n    content: normalizeContent(file.content)\n  };\n});\n\nconst expectedFromTechnicalDesign =\n  Array.isArray(input.technical_design?.project_structure)\n    ? input.technical_design.project_structure\n    : [];\n\nconst expectedFromTdd =\n  Array.isArray(input.tdd_test_design?.pytest_files)\n    ? input.tdd_test_design.pytest_files\n    : [];\n\nconst expectedFiles = [\n  ...expectedFromTechnicalDesign,\n  ...expectedFromTdd\n]\n  .filter(path => typeof path === \"string\")\n  .map(normalizePath)\n  .filter(path => path.length > 0);\n\nconst existingPaths =\n  normalizedFiles.map(file => file.path);\n\nconst missingFiles =\n  expectedFiles.filter(path => !existingPaths.includes(path));\n\nconst invalidFiles = normalizedFiles.filter(file => {\n  const invalidPath =\n    !file.path ||\n    typeof file.path !== \"string\" ||\n    file.path.includes(\"ai_factory_workspace\") ||\n    file.path.includes(\"n8n_files\") ||\n    file.path.startsWith(\"product-app/\");\n\n  const invalidContent =\n    typeof file.content !== \"string\";\n\n  const flattenedPython =\n    file.path.endsWith(\".py\") &&\n    typeof file.content === \"string\" &&\n    !file.content.includes(\"\\n\");\n\n  const flattenedYaml =\n    (\n      file.path.endsWith(\".yml\") ||\n      file.path.endsWith(\".yaml\")\n    ) &&\n    typeof file.content === \"string\" &&\n    !file.content.includes(\"\\n\");\n\n  return (\n    invalidPath ||\n    invalidContent ||\n    flattenedPython ||\n    flattenedYaml\n  );\n});\n\nconst passed =\n  Array.isArray(normalizedFiles) &&\n  normalizedFiles.length > 0 &&\n  invalidFiles.length === 0 &&\n  missingFiles.length === 0 &&\n  result.quality_gate?.passed === true;\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf04_result: {\n        ...result,\n        files: normalizedFiles\n      },\n      wf04_file_validation: {\n        passed,\n        file_count: normalizedFiles.length,\n        missing_files: missingFiles,\n        invalid_files: invalidFiles.map(file => file.path || \"unknown\")\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        -96
+      ],
+      "id": "11414f1b-ef03-49c0-a307-723f3bf4f03b",
+      "name": "06 - Validate Generated Files"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst original =\n  $('01 - Extract WF03 Payload').item.json;\n\nconst payload =\n  original.payload;\n\nconst result =\n  input.wf04_result;\n\nconst fileValidation =\n  input.wf04_file_validation;\n\nconst nextWorkflow =\n  fileValidation.passed === true\n    ? \"WF05\"\n    : \"WF08\";\n\nconst updatedPayload = {\n  ...payload,\n\n  factory: {\n    ...payload.factory,\n    current_workflow: \"WF04\",\n    next_workflow: nextWorkflow,\n    status:\n      nextWorkflow === \"WF05\"\n        ? \"RUNNING\"\n        : \"BLOCKED\",\n\n    workflow_history: [\n      ...(payload.factory.workflow_history || []),\n      \"WF04\"\n    ]\n  },\n\n  code_generation: result.code_generation,\n\n  generated_files: result.files,\n\n  quality_gate: {\n    ...(result.quality_gate || {}),\n    passed: fileValidation.passed,\n    blocking_issues: [\n      ...((result.quality_gate || {}).blocking_issues || []),\n      ...(fileValidation.missing_files || []).map(file => `Missing required file: ${file}`),\n      ...(fileValidation.invalid_files || []).map(file => `Invalid generated file: ${file}`)\n    ],\n    recommendation:\n      fileValidation.passed === true\n        ? \"CONTINUE\"\n        : \"HUMAN_REVIEW\"\n  },\n\n  artifacts: [\n    ...(payload.artifacts || []),\n\n    {\n      workflow: \"WF04\",\n      type: \"generated_files\",\n      name: \"generated_files.json\",\n      content: result.files\n    },\n\n    {\n      workflow: \"WF04\",\n      type: \"code_generation\",\n      name: \"code_generation.json\",\n      content: result.code_generation\n    }\n  ]\n};\n\nreturn [\n  {\n    json: {\n      execution_id: original.execution_id,\n      payload: updatedPayload,\n      current_workflow: \"WF04\",\n      next_workflow: nextWorkflow,\n      status: updatedPayload.factory.status,\n      quality_gate: updatedPayload.quality_gate\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -96
+      ],
+      "id": "1e4b5ae5-54fe-4b9f-b89d-ca689c484d6b",
+      "name": "07 - Prepare WF05 Payload"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1856,
+        96
+      ],
+      "id": "15531030-e77d-46d6-a28e-0a1d01c7fdaf",
+      "name": "08 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c7d391f-70bf-46b5-9942-561885cda172",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "521a86e7-0828-43ba-9675-7735a6fe6629",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "b0f190e6-72a6-4464-b04e-88447c79bd58",
+              "name": "current_workflow",
+              "value": "WF04",
+              "type": "string"
+            },
+            {
+              "id": "89bfc020-e7c8-490f-addd-55a492be8810",
+              "name": "next_workflow",
+              "value": "={{ $json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "a8b678c1-ec39-4014-b44c-ca2327ce5da2",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2288,
+        96
+      ],
+      "id": "866ceb7d-07d1-4e57-b3a9-c0ff01dd39da",
+      "name": "09 - Return WF04 Result"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "575401c7-1529-4f35-97fc-35f80a155fdd",
+              "name": "execution_id",
+              "value": "={{ $('07 - Prepare WF05 Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "03c8c2c6-97af-42f8-a682-819ffadc48f5",
+              "name": "payload",
+              "value": "={{ $('07 - Prepare WF05 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "d53a42ce-7c58-4b07-8a42-e0a36ce207fd",
+              "name": "current_workflow",
+              "value": "WF04",
+              "type": "string"
+            },
+            {
+              "id": "d5d21f52-4e6e-4102-81e1-a3956b8ed61c",
+              "name": "next_workflow",
+              "value": "={{ $('07 - Prepare WF05 Payload').item.json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "dd012a64-683b-4201-8a74-fb8fbdc9ad40",
+              "name": "status",
+              "value": "={{ $('07 - Prepare WF05 Payload').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "9a860728-9987-4b39-8e92-2eca0b73d798",
+              "name": "quality_gate",
+              "value": "={{ $('07 - Prepare WF05 Payload').item.json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        96
+      ],
+      "id": "93846f74-df96-417d-a9df-25df6a0358c3",
+      "name": "08B - Restore WF04 Payload"
+    },
+    {
+      "parameters": {
+        "model": "codestral-2508",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        832,
+        48
+      ],
+      "id": "bc9336f8-3d0a-4815-997a-cbd8c79b80d6",
+      "name": "Codestral 2508",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "qZLHl5hy2YsvBQEc",
+          "name": "Mistral Cloud Studio Key (RussoDavid)"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract WF03 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract WF03 Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate TDD Design",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate TDD Design": {
+      "main": [
+        [
+          {
+            "node": "03 - IF TDD Design Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - IF TDD Design Valid?": {
+      "main": [
+        [
+          {
+            "node": "04 - AI Code Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - AI Code Generator": {
+      "main": [
+        [
+          {
+            "node": "05 - Parse Generated Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Parse Generated Files": {
+      "main": [
+        [
+          {
+            "node": "06 - Validate Generated Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Validate Generated Files": {
+      "main": [
+        [
+          {
+            "node": "07 - Prepare WF05 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Prepare WF05 Payload": {
+      "main": [
+        [
+          {
+            "node": "08 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "08B - Restore WF04 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "08 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08B - Restore WF04 Payload": {
+      "main": [
+        [
+          {
+            "node": "09 - Return WF04 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Codestral 2508": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "04 - AI Code Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f1ff0817-31fa-4c1d-8c55-162ff5f82e0e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "AaJ7vv4bgoo5VhQk",
+  "tags": []
+}

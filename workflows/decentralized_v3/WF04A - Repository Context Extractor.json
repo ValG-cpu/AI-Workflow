@@ -1,0 +1,474 @@
+{
+  "name": "WF04A - Repository Context Extractor",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bbe5e60a-76d4-419b-89dc-155f7928a9cd",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cdf8d301-f7b2-417d-bf0a-7d9cd8562c1c",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6227b544-892c-42df-be2f-0e8e8ec893fb",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "a89be401-0ed4-4023-9f90-f435d050d8e8",
+              "name": "work_item_id",
+              "value": "={{ $json.payload.ado.work_item_id }}",
+              "type": "number"
+            },
+            {
+              "id": "04fcaa93-b181-4e17-b3a8-b7febb7e2a6e",
+              "name": "title",
+              "value": "={{ $json.payload.ado.title }}",
+              "type": "string"
+            },
+            {
+              "id": "dc2405e0-4a9d-45f9-be0f-13b392aab47c",
+              "name": "repository",
+              "value": "={{ $json.payload.ado.repository }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7d13d739-c6f2-4efb-ba9f-29b7dcf13254",
+      "name": "01 - Extract WF03 Payload"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fec55772-6c5a-465e-8768-d7b1d2c95bf0",
+              "name": "workspace_root",
+              "value": "/home/node/.n8n-files/nutrition_app_workspace",
+              "type": "string"
+            },
+            {
+              "id": "8245a984-4462-4f71-bf09-c0c5c74676a7",
+              "name": "repo_path",
+              "value": "={{ `/home/node/.n8n-files/nutrition_app_workspace/context-${$json.execution_id}` }}",
+              "type": "string"
+            },
+            {
+              "id": "41c98243-8a6b-48c7-a984-038e0de01a43",
+              "name": "repo_url",
+              "value": "https://github.com/ValG-cpu/Nutrition-App.git",
+              "type": "string"
+            },
+            {
+              "id": "46e16b44-b9c8-42eb-8b2e-5646209e3e7e",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "026581ca-44ab-4df6-88af-0caa2409bc23",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "348325eb-e69b-47dd-9268-55281d11c1bc",
+      "name": "02 - Prepare Repository Paths"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require(\"fs\");\n\nconst input = $input.first().json;\n\nfs.mkdirSync(input.workspace_root, {\n  recursive: true\n});\n\nreturn [\n  {\n    json: input\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "818d93fb-3222-4a64-8fb9-be37ffa5ffde",
+      "name": "03 - Ensure Workspace Exists"
+    },
+    {
+      "parameters": {
+        "authentication": "gitPassword",
+        "operation": "clone",
+        "repositoryPath": "={{ $('02 - Prepare Repository Paths').item.json.repo_path }}",
+        "sourceRepository": "={{ $('02 - Prepare Repository Paths').item.json.repo_url }}"
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "8e37a593-a76b-4785-a4f1-888255098688",
+      "name": "04 - Clone Repository",
+      "credentials": {
+        "gitPassword": {
+          "id": "EIboams0wossiDAH",
+          "name": "Github PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst context =\n  $(\"02 - Prepare Repository Paths\").item.json;\n\nconst repoPath =\n  context.repo_path;\n\nconst ignoredDirs = new Set([\n  \".git\",\n  \"node_modules\",\n  \"__pycache__\",\n  \".venv\",\n  \"venv\",\n  \"dist\",\n  \"build\",\n  \".pytest_cache\",\n  \"workflows\"\n]);\n\nconst allowedExtensions = new Set([\n  \".py\",\n  \".txt\",\n  \".md\",\n  \".json\",\n  \".yml\",\n  \".yaml\",\n  \".toml\",\n  \".ini\"\n]);\n\nfunction walk(dir, base = \"\") {\n  let results = [];\n\n  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {\n    if (ignoredDirs.has(entry.name)) {\n      continue;\n    }\n\n    const fullPath =\n      path.join(dir, entry.name);\n\n    const relativePath =\n      path.join(base, entry.name).replace(/\\\\/g, \"/\");\n\n    if (entry.isDirectory()) {\n      results =\n        results.concat(walk(fullPath, relativePath));\n    }\n    else {\n      const ext =\n        path.extname(entry.name);\n\n      if (allowedExtensions.has(ext)) {\n        results.push(relativePath);\n      }\n    }\n  }\n\n  return results;\n}\n\nconst repositoryStructure =\n  walk(repoPath).filter(filePath =>\n    filePath.startsWith(\"product-app/\")\n  );\n\nconst importantPatterns = [\n  \"product-app/README.md\",\n  \"product-app/requirements.txt\",\n  \"product-app/macro_calculator.py\",\n  \"product-app/sample_data.py\",\n  \"product-app/tests/test_macro_calculator.py\"\n];\n\nconst importantFiles = [];\n\nfor (const filePath of repositoryStructure) {\n  const isImportant =\n    importantPatterns.includes(filePath);\n\n  if (!isImportant) {\n    continue;\n  }\n\n  const fullPath =\n    path.join(repoPath, filePath);\n\n  let content = \"\";\n\n  try {\n    content =\n      fs.readFileSync(fullPath, \"utf8\");\n  }\n  catch {\n    continue;\n  }\n\n  if (content.length > 2000) {\n    content =\n      content.slice(0, 2000) + \"\\n...[TRUNCATED]\";\n  }\n\n  if (importantFiles.length >= 6) {\n    break;\n  }\n\n  importantFiles.push({\n    path: filePath,\n    content\n  });\n}\n\nconst existingTests =\n  repositoryStructure.filter(file =>\n    file.startsWith(\"product-app/tests/\") ||\n    file.includes(\"test_\")\n  );\n\nconst dependenciesFile =\n  importantFiles.find(file =>\n    file.path === \"product-app/requirements.txt\" ||\n    file.path === \"product-app/pyproject.toml\"\n  );\n\nconst dependencies =\n  dependenciesFile\n    ? dependenciesFile.content\n        .split(\"\\n\")\n        .map(line => line.trim())\n        .filter(line => line && !line.startsWith(\"#\"))\n        .slice(0, 50)\n    : [];\n\nconst projectContext = {\n  repository_path: repoPath,\n  repository_structure: repositoryStructure,\n  important_files: importantFiles,\n  existing_tests: existingTests,\n  dependencies,\n  implementation_constraints: [\n    \"Keep a minimal local Python macro calculator\",\n    \"Do not introduce FastAPI, APIs, database, auth, services or routers\",\n    \"Modify only macro_calculator.py, sample_data.py, requirements.txt or tests/test_macro_calculator.py\",\n    \"Keep changes limited to the current User Story\"\n  ]\n};\n\nreturn [\n  {\n    json: {\n      execution_id: context.execution_id,\n\n      payload: {\n        ...context.payload,\n\n        repository_context: projectContext,\n\n        repository_summary: JSON.stringify({\n          python_files: repositoryStructure,\n          detected_tests: existingTests\n        }),\n\n        factory: {\n          ...context.payload.factory,\n          current_workflow: \"WF04A\",\n          next_workflow: \"WF04\",\n          status: \"RUNNING\",\n          workflow_history: [\n            ...(context.payload.factory.workflow_history || []),\n            \"WF04A\"\n          ]\n        }\n      },\n\n      current_workflow: \"WF04A\",\n      next_workflow: \"WF04\",\n      status: \"RUNNING\",\n\n      quality_gate: {\n        passed: true,\n        blocking_issues: [],\n        recommendation: \"CONTINUE\"\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "5e6ba4ee-0737-439e-92fd-72c4f34661e3",
+      "name": "05 - Extract Repository Context"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "71c1af73-a95f-4d97-aa5b-15bd9de63856",
+      "name": "06 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "35b5977b-5e51-434c-a105-5be1984b8e29",
+              "name": "execution_id",
+              "value": "={{ $('05 - Extract Repository Context').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f385b26c-0b03-4f96-af78-eb3b512cabb2",
+              "name": "payload",
+              "value": "={{ $('05 - Extract Repository Context').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "99dca10d-3267-4dc4-9c48-4ed57195a77a",
+              "name": "current_workflow",
+              "value": "WF04A",
+              "type": "string"
+            },
+            {
+              "id": "502965ad-aea1-49f6-8655-eae24226227c",
+              "name": "next_workflow",
+              "value": "WF04",
+              "type": "string"
+            },
+            {
+              "id": "4bfe8bb3-2c49-45cf-8952-68dc748fdcd3",
+              "name": "status",
+              "value": "RUNNING",
+              "type": "string"
+            },
+            {
+              "id": "6c4e69ff-be35-4338-9eb1-e4fd5919514a",
+              "name": "quality_gate",
+              "value": "={{ $('05 - Extract Repository Context').item.json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1664,
+        0
+      ],
+      "id": "8b4388a6-9665-4ae8-aa23-59ea2f0501ea",
+      "name": "07 - Return WF04A Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require(\"fs\");\n\nconst input = $input.first().json;\n\nif (\n  input.repo_path &&\n  input.repo_path.startsWith(\"/home/node/.n8n-files/nutrition_app_workspace/context-\")\n) {\n  fs.rmSync(input.repo_path, {\n    recursive: true,\n    force: true\n  });\n}\n\nreturn [\n  {\n    json: input\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "60807831-814b-4d1d-9476-90cf93ade771",
+      "name": "03B - Reset Context Repo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract WF03 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract WF03 Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Prepare Repository Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Prepare Repository Paths": {
+      "main": [
+        [
+          {
+            "node": "03 - Ensure Workspace Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Ensure Workspace Exists": {
+      "main": [
+        [
+          {
+            "node": "03B - Reset Context Repo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Clone Repository": {
+      "main": [
+        [
+          {
+            "node": "05 - Extract Repository Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Extract Repository Context": {
+      "main": [
+        [
+          {
+            "node": "06 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "07 - Return WF04A Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03B - Reset Context Repo": {
+      "main": [
+        [
+          {
+            "node": "04 - Clone Repository",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0335dff0-08ab-449a-afd3-72622c547fc8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "lkifaBUzPSciyhKA",
+  "tags": []
+}

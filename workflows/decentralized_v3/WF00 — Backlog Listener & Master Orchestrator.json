@@ -1,0 +1,1297 @@
+{
+  "name": "WF00 — Backlog Listener & Master Orchestrator",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "a9daff2e-1748-40d2-8676-d3f7562e5e13",
+      "name": "00 - Manual Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_apis/wit/wiql?api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"query\": \"SELECT [System.Id], [System.Title], [System.State], [System.Tags] FROM WorkItems WHERE [System.TeamProject] = 'AI-Workflow-Nutrition' AND [System.WorkItemType] = 'User Story' AND [System.State] = 'New' AND [System.Tags] CONTAINS 'Decentralized' AND NOT [System.Tags] CONTAINS 'AI_PROCESSING' AND NOT [System.Tags] CONTAINS 'AI_COMPLETED' ORDER BY [System.CreatedDate] ASC\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "eff475a1-1f82-4a05-89b7-df0913e9dd47",
+      "name": "01 - Find Decentralized User Stories",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "01b1fb8c-1489-4504-81d0-a40ace8d6aa9",
+              "leftValue": "={{ $json.workItems.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "b07fff1b-7b83-4494-8493-1fc9a8fdbed5",
+      "name": "02 - Has Work Items?"
+    },
+    {
+      "parameters": {
+        "url": "=https://dev.azure.com/AI-Workflow-Nutrition/_apis/wit/workitems/{{ $json.id }}?$expand=all&api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "a96626ea-cc11-41a8-b76e-d657da8f3715",
+      "name": "04 - Get Work Item Details",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const workItem = $input.first().json;\n\nconst executionId =\n  Date.now().toString() +\n  \"-\" +\n  Math.floor(Math.random() * 1000000).toString();\n\nreturn [\n  {\n    json: {\n      execution_id: executionId,\n      source: \"azure_devops\",\n\n      ado: {\n        organization: \"AI-Workflow-Nutrition\",\n        project: \"AI-Workflow-Nutrition\",\n        repository: \"AI-Workflow-Nutrition\",\n        work_item_id: workItem.id,\n        url: workItem.url,\n        title: workItem.fields[\"System.Title\"],\n        state: workItem.fields[\"System.State\"],\n        tags: workItem.fields[\"System.Tags\"] || \"\",\n        description: workItem.fields[\"System.Description\"] || \"\",\n        acceptance_criteria:\n          workItem.fields[\"Microsoft.VSTS.Common.AcceptanceCriteria\"] || \"\"\n      },\n\n      factory: {\n        current_workflow: \"WF00\",\n        next_workflow: \"WF01\",\n        status: \"RUNNING\",\n        retry_count: 0,\n        max_retry_count: 3,\n        created_at: new Date().toISOString(),\n        workflow_history: [\"WF00\"]\n      },\n\n      artifacts: [],\n      errors: []\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -96
+      ],
+      "id": "2cebf04d-84c4-4be7-972e-5a6962e8d49c",
+      "name": "05 - Initialize Execution Payload"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "work_item_id": "={{ $json.ado.work_item_id }}",
+            "retry_count": "={{ $json.factory.retry_count }}",
+            "execution_id": "={{ $json.execution_id }}",
+            "title": "={{ $json.ado.title }}",
+            "current_workflow": "={{ $json.factory.current_workflow }}",
+            "next_workflow": "={{ $json.factory.next_workflow }}",
+            "status": "={{ $json.factory.status }}",
+            "execution_payload": "={{ JSON.stringify($json) }}",
+            "created_at": "={{ $json.factory.created_at }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "optimizeBulk": true
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1456,
+        -96
+      ],
+      "id": "afb09d33-2919-49f7-a39b-05d78751f763",
+      "name": "06 - Insert Execution State Row",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "factory_execution_state",
+        "columns": {
+          "column": [
+            {
+              "name": "execution_id"
+            },
+            {
+              "name": "work_item_id",
+              "type": "number"
+            },
+            {
+              "name": "title"
+            },
+            {
+              "name": "current_workflow"
+            },
+            {
+              "name": "next_workflow"
+            },
+            {
+              "name": "status"
+            },
+            {
+              "name": "retry_count",
+              "type": "number"
+            },
+            {
+              "name": "execution_payload"
+            },
+            {
+              "name": "created_at"
+            },
+            {
+              "name": "next_workflow_payload"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "6da3c3bf-c2e6-44c3-b752-c4da2fd67c7d",
+      "name": "00b - Ensure Execution State Table",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_apis/wit/workitems/{{ $('05 - Initialize Execution Payload').item.json.ado.work_item_id }}?api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json-patch+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.Tags\",\n    \"value\": \"Decentralized;AI_PROCESSING\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.History\",\n    \"value\": \"AI Software Factory execution started by WF00.\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.State\",\n    \"value\": \"Active\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1664,
+        -96
+      ],
+      "id": "b537a598-06c6-4c7b-bbdc-8737a180579c",
+      "name": "07 - Mark Work Item AI_PROCESSING",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2f7f92b4-2f29-4f27-be39-b70d0cd7d956",
+              "name": "execution_id",
+              "value": "={{ $('05 - Initialize Execution Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1e40aa69-19a3-4156-979d-bafea69e32df",
+              "name": "payload",
+              "value": "={{ $('05 - Initialize Execution Payload').item.json }}",
+              "type": "object"
+            },
+            {
+              "id": "2fab5855-a37a-4527-ac3f-1f7ca44d0007",
+              "name": "next_workflow",
+              "value": "={{ $('05 - Initialize Execution Payload').item.json.factory.next_workflow }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1872,
+        -96
+      ],
+      "id": "fddae204-9f0f-46b7-940d-a8f4a3b08c24",
+      "name": "08 - Restore Factory Payload"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "17xqAaEhPGpV7mnV",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/17xqAaEhPGpV7mnV",
+          "cachedResultName": "WF01 - Requirement Analysis"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2080,
+        -96
+      ],
+      "id": "b18403c7-ee63-48d2-9c59-9d736f9eb0d9",
+      "name": "10 - Call WF01 Requirement Analysis"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6531e182-7325-460b-bbb7-8f586193f95e",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF02",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a4b1586d-3218-449f-92f3-77b396e4599c",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF03",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d2f10717-42e7-4f10-a5f5-f0126c79ca63",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF04A",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d573be6b-6311-4a10-a9d9-ada7942c9d74",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF04",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a6f341e2-5dde-48ac-adab-6a9ae1c523fd",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF05",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "069720c5-5ccf-4e69-8f2e-366b2b1ee182",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF06",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "34b1f792-4cd6-4741-8172-fc444d882e79",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF07",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a668caff-56be-495c-b980-5c943fbd044c",
+                    "leftValue": "={{ $json.next_workflow }}",
+                    "rightValue": "WF08",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2320,
+        -192
+      ],
+      "id": "247b5897-1cb8-4237-a9b0-9d6d59d0253e",
+      "name": "11 - Route Next Workflow"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "BC3oV59wb4VPDTCd",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/BC3oV59wb4VPDTCd",
+          "cachedResultName": "WF02 - Technical Design"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        -816
+      ],
+      "id": "c63f13c2-5eb3-45ff-a395-8a536902c689",
+      "name": "12 - Call WF02 Technical Design"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "0anr3Gyd1bHM4TbJ",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/0anr3Gyd1bHM4TbJ",
+          "cachedResultName": "WF03 - TDD Test Design"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        -608
+      ],
+      "id": "e7c6f475-6a34-40aa-ab49-f29a3257fcb5",
+      "name": "13 - Call WF03 TDD Test Design"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "AaJ7vv4bgoo5VhQk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/AaJ7vv4bgoo5VhQk",
+          "cachedResultName": "WF04 - Code Generation"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        -224
+      ],
+      "id": "1f7e262c-d279-4ef0-979a-1577d3e1eaa6",
+      "name": "14 - Call WF04 Code Generation"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "8EHv3VHZxhNzU9je",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/8EHv3VHZxhNzU9je",
+          "cachedResultName": "WF05 - Repository Executor"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        32
+      ],
+      "id": "9987f3ef-9ce9-4827-9785-023b6fcdc363",
+      "name": "15 - Call WF05 Repository Executor"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "7PcIXxEsIaR3KKqC",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/7PcIXxEsIaR3KKqC",
+          "cachedResultName": "WF06 - CI/CD Executor"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        224
+      ],
+      "id": "124cc865-2a81-4df9-ba8c-f3b7c9c396f3",
+      "name": "16 - Call WF06 CI/CD Executor"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "hPuibNWDk03DbddV",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/hPuibNWDk03DbddV",
+          "cachedResultName": "WF08 - Human Escalation & Governance"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        656
+      ],
+      "id": "c48bc7cf-8a5c-4ecf-84f2-05d33876d7fd",
+      "name": "18 - Call WF08 Governance"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "bgYieN8H9BXUfZNY",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/bgYieN8H9BXUfZNY",
+          "cachedResultName": "WF07 - Reporting & Traceability"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        448
+      ],
+      "id": "0722248d-2df8-4397-9e59-8ae5c831a4ea",
+      "name": "17 - Call WF07 Reporting"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lkifaBUzPSciyhKA",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/lkifaBUzPSciyhKA",
+          "cachedResultName": "WF04A - Repository Context Extractor"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2624,
+        -416
+      ],
+      "id": "e379982c-ce8a-4c7e-8668-4756690ad90d",
+      "name": "Call WF04A Repository Context Extractor"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_apis/wit/workitems/{{ $('05 - Initialize Execution Payload').item.json.ado.work_item_id }}?api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json-patch+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.Tags\",\n    \"value\": \"Decentralized;AI_COMPLETED\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.History\",\n    \"value\": \"AI Software Factory execution completed successfully.\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.State\",\n    \"value\": \"Closed\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2832,
+        448
+      ],
+      "id": "4b6e53ab-2680-4a53-b6d8-967b51c34934",
+      "name": "19 - Mark Work Item AI_COMPLETED",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_apis/wit/workitems/{{ $('05 - Initialize Execution Payload').item.json.ado.work_item_id }}?api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json-patch+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.Tags\",\n    \"value\": \"Decentralized\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.State\",\n    \"value\": \"New\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.History\",\n    \"value\": \"AI Software Factory execution blocked. Work item reset to New and AI_PROCESSING tag removed.\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2832,
+        656
+      ],
+      "id": "ec1a1b5e-d760-4675-be57-811f7c55a120",
+      "name": "20 - Reset Blocked Work Item",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.workItems;\n\nif (!items || items.length === 0) {\n  return [];\n}\n\nreturn [\n  {\n    json: items[0]\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "ef3220f4-bc72-4843-8766-3c0b0a2ded51",
+      "name": "03 - Keep First Work Item Only"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_apis/wit/workitems/{{ $('05 - Initialize Execution Payload').item.json.ado.work_item_id }}?api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json-patch+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/fields/System.Tags\",\n    \"value\": \"{{ $('05 - Initialize Execution Payload').item.json.ado.tags.replace(/;?\\\\s*AI_PROCESSING/g, '').trim() }}\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3040,
+        656
+      ],
+      "id": "901453be-a3af-4128-a771-1901ed409fe6",
+      "name": "21 - Force Clean Tags",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## {WiP} - Release / Merge orchestrator system\n",
+        "height": 448,
+        "width": 1328,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        800,
+        112
+      ],
+      "typeVersion": 1,
+      "id": "c49f3339-b225-473f-a248-d204b7dacd72",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "00b - Ensure Execution State Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Find Decentralized User Stories": {
+      "main": [
+        [
+          {
+            "node": "02 - Has Work Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Has Work Items?": {
+      "main": [
+        [
+          {
+            "node": "03 - Keep First Work Item Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Get Work Item Details": {
+      "main": [
+        [
+          {
+            "node": "05 - Initialize Execution Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Initialize Execution Payload": {
+      "main": [
+        [
+          {
+            "node": "06 - Insert Execution State Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Insert Execution State Row": {
+      "main": [
+        [
+          {
+            "node": "07 - Mark Work Item AI_PROCESSING",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "00b - Ensure Execution State Table": {
+      "main": [
+        [
+          {
+            "node": "01 - Find Decentralized User Stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Mark Work Item AI_PROCESSING": {
+      "main": [
+        [
+          {
+            "node": "08 - Restore Factory Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Restore Factory Payload": {
+      "main": [
+        [
+          {
+            "node": "10 - Call WF01 Requirement Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Call WF01 Requirement Analysis": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - Route Next Workflow": {
+      "main": [
+        [
+          {
+            "node": "12 - Call WF02 Technical Design",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "13 - Call WF03 TDD Test Design",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call WF04A Repository Context Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "14 - Call WF04 Code Generation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "15 - Call WF05 Repository Executor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "16 - Call WF06 CI/CD Executor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "17 - Call WF07 Reporting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "18 - Call WF08 Governance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 - Call WF02 Technical Design": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Call WF03 TDD Test Design": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 - Call WF04 Code Generation": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 - Call WF05 Repository Executor": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 - Call WF06 CI/CD Executor": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 - Call WF07 Reporting": {
+      "main": [
+        [
+          {
+            "node": "19 - Mark Work Item AI_COMPLETED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 - Call WF08 Governance": {
+      "main": [
+        [
+          {
+            "node": "20 - Reset Blocked Work Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF04A Repository Context Extractor": {
+      "main": [
+        [
+          {
+            "node": "11 - Route Next Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 - Mark Work Item AI_COMPLETED": {
+      "main": [
+        [
+          {
+            "node": "01 - Find Decentralized User Stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Keep First Work Item Only": {
+      "main": [
+        [
+          {
+            "node": "04 - Get Work Item Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 - Reset Blocked Work Item": {
+      "main": [
+        [
+          {
+            "node": "21 - Force Clean Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "82d9709b-e83e-4e50-9df0-7f92e710d966",
+  "meta": {
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "XV8N7VjJK02rCHfd",
+  "tags": []
+}
