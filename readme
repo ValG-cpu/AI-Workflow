@@ -1,0 +1,254 @@
+AI Workflow for Developers - Team Project
+
+Overview
+This repository contains the shared project for the Emerging Technologies module.
+The project demonstrates different AI workflow systems designed by the team members.
+Each system uses n8n as an orchestration platform and connects external services such as Azure DevOps, GitHub, GitHub Actions and LLM providers.
+This README explains how to start the local n8n environment, import the workflows and execute the different systems.
+
+<br>
+
+Repository Structure
+docker-compose.yml
+workflows/
+n8n_data/
+.env
+README.md
+
+<br>
+
+Local n8n Self-Hosting Setup
+The project uses a self-hosted n8n instance running locally with Docker.
+The docker-compose.yml file is already included in the project.
+Before starting n8n, the following local resources must be available:
+Docker Desktop installed and running
+Git installed
+The project repository cloned locally
+A local .env file if environment variables are required
+A local n8n_data directory for persistent n8n data
+
+<br>
+
+Clone the Project Repository
+Open a terminal and clone the project repository.
+Replace the URL if another remote is used.
+git clone <repository-url>
+cd AI-Workflow-Nutrition
+
+<br>
+
+Prepare Local n8n Data
+The n8n_data directory is used to persist the local n8n database and configuration.
+If the directory does not exist, create it before starting Docker.
+mkdir n8n_data
+The .env file can be used for local configuration values if needed.
+This file must not be committed.
+
+<br>
+
+Start n8n
+From the root of the project, run:
+docker compose up -d
+n8n is then available at:
+http://localhost:5678
+At first launch, n8n asks to create a local user account.
+This account is only used for the local n8n instance.
+
+<br>
+
+Stop n8n
+To stop the local n8n instance:
+docker compose down
+To restart it later:
+docker compose up -d
+
+<br>
+
+Persistent Data
+The local n8n data is stored in the n8n_data directory.
+This directory is ignored by Git.
+The .env file is also ignored by Git because it can contain local configuration values or secrets.
+The .gitignore currently contains:
+n8n_data
+.env
+
+<br>
+
+Import Workflows in n8n
+Open n8n at:
+http://localhost:5678
+Create the local n8n account if it does not already exist.
+Open the workflow import menu.
+Import the workflow JSON files from the workflows directory.
+After import, each workflow can be opened, inspected and executed from the n8n interface.
+
+<br>
+
+Configure Credentials in n8n
+The workflows require credentials to connect to external services.
+Credentials are not stored in Git.
+They must be configured inside the local n8n instance after the workflows are imported.
+The main credential types used by the project are:
+Azure DevOps Personal Access Token
+GitHub Personal Access Token or GitHub Bearer Token
+Mistral or OpenAI API Key
+Ollama local endpoint, if a local model is used
+
+<br>
+
+System 1 - Team Member Section
+Purpose:
+To be completed.
+Workflows:
+To be completed.
+Execution steps:
+To be completed.
+Credentials:
+To be completed.
+
+<br>
+
+System 2 - Team Member Section
+Purpose:
+To be completed.
+Workflows:
+To be completed.
+Execution steps:
+To be completed.
+Credentials:
+To be completed.
+
+<br>
+
+System 3 - Decentralized AI Software Factory
+Purpose:
+This system demonstrates a semi-autonomous AI Software Factory based on real User Stories.
+It transforms Azure DevOps User Stories into generated code, tests, Git branches, GitHub Actions executions and reporting artifacts.
+The workflow chain processes the User Story, generates implementation files, pushes a GitHub branch, triggers CI/CD and stores a final execution report.
+
+<br>
+
+Azure DevOps Usage
+Azure DevOps is used as the backlog and User Story source for this system.
+The workflows fetch User Stories from Azure DevOps and update their tags during execution.
+The Azure DevOps project must already contain the User Stories to process.
+User Stories intended for the decentralized AI workflow must use the expected project tags.
+Example tags:
+Decentralized
+SEQ_001
+During execution, the workflow can add tags such as:
+AI_PROCESSING
+AI_COMPLETED
+
+<br>
+
+GitHub Usage
+GitHub is used as the application repository for this system.
+The workflow creates feature branches, writes generated files, commits them and pushes them to GitHub.
+GitHub Actions is used to execute the CI pipeline.
+Application repository:
+https://github.com/ValG-cpu/Nutrition-App
+
+<br>
+
+Running the System
+The execution starts from the master workflow:
+WF00 - Master Orchestrator
+WF00 fetches the next eligible User Story from Azure DevOps and calls the next workflows in sequence.
+The workflow chain processes the User Story, generates implementation files, pushes a GitHub branch, triggers CI/CD and stores a final execution report.
+
+<br>
+
+Workflow List
+Bootstrap - User Story Creation
+Creates simple and sequential Azure DevOps User Stories automatically.
+Initializes the backlog with small atomic User Stories.
+Adds the required project tags such as Decentralized and SEQ_XXX.
+This workflow is used before WF00 when the backlog must be prepared automatically.
+
+<br>
+
+WF00 - Master Orchestrator
+Coordinates the full execution chain.
+Fetches eligible Azure DevOps User Stories.
+Initializes the execution payload.
+Calls the next workflows.
+
+<br>
+
+WF01 - Requirement Analysis
+Analyzes the selected User Story.
+Checks clarity, completeness and feasibility.
+Produces a requirement analysis artifact.
+
+<br>
+
+WF02 - Technical Design
+Produces a technical design from the analyzed User Story.
+Defines files, modules, dependencies and implementation constraints.
+
+<br>
+
+WF03 - TDD / Test Design
+Generates the test strategy.
+Defines expected pytest tests.
+Keeps the test scope aligned with the User Story acceptance criteria.
+
+<br>
+
+WF04A - Repository Context Extractor
+Clones the application repository.
+Extracts the existing repository structure.
+Provides repository context to the code generation workflow.
+
+<br>
+
+WF04 - Code Generation
+Generates implementation files.
+Normalizes file content for transport between workflows.
+Validates generated files before they are sent to Git operations.
+
+<br>
+
+WF05 - Repository Executor
+Creates a Git branch.
+Writes generated files into the application repository.
+Commits and pushes the branch to GitHub.
+
+<br>
+
+WF06 - CI/CD Executor
+Triggers GitHub Actions on the generated branch.
+Polls the workflow run status.
+Routes the execution depending on pipeline success or failure.
+
+<br>
+
+WF07 - Reporting and Traceability
+Builds the final execution report.
+Stores the traceability matrix.
+Marks the execution as completed.
+
+<br>
+
+WF08 - Human Review / Recovery
+Handles blocked executions.
+Stores errors and recovery information.
+Used when a workflow cannot continue automatically.
+
+<br>
+
+Troubleshooting
+If n8n does not start, check that Docker Desktop is running.
+If workflows cannot access external services, verify the credentials configured in n8n.
+If the GitHub pipeline does not start, verify that the GitHub token has workflow permissions.
+If Azure DevOps User Stories are not found, verify the tags and the Azure DevOps query used by the workflow.
+If generated code fails the pipeline, check the GitHub Actions logs and the final workflow payload.
+
+<br>
+
+Known Limitations
+The current system processes User Stories independently.
+The merge or release orchestration between multiple generated branches is not automated yet.
+Manual review may be required when several branches modify the same files.
+The system demonstrates an industrialized AI workflow execution chain, but it does not yet include a full automated release manager.
