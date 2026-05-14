@@ -1,0 +1,599 @@
+{
+  "name": "WF07 - Reporting & Traceability",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1afbd0a6-c241-41b2-9ebd-f2eccaa80564",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1db382c-b9f6-432c-8742-a1a9bd1805ad",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9b6d966d-e676-43fd-a801-7960c0056013",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "5a8b1f42-c503-446b-9e5f-ff752eca4f3c",
+              "name": "work_item_id",
+              "value": "={{ $json.payload.ado.work_item_id }}",
+              "type": "number"
+            },
+            {
+              "id": "3f21e8d1-aa58-4a6d-8cc0-df44d123bddd",
+              "name": "title",
+              "value": "={{ $json.payload.ado.title }}",
+              "type": "string"
+            },
+            {
+              "id": "dfa8d19a-1974-49e7-ab79-7a080ac3f71c",
+              "name": "workflow_history",
+              "value": "={{ $json.payload.factory.workflow_history }}",
+              "type": "array"
+            },
+            {
+              "id": "027c088b-c23f-4ab9-b752-a5e9411e2834",
+              "name": "generated_files",
+              "value": "={{ $json.payload.generated_files }}",
+              "type": "array"
+            },
+            {
+              "id": "601d2daa-632b-4312-957d-0d6191d681c7",
+              "name": "branch_name",
+              "value": "={{ $json.payload.repository_execution.branch_name }}",
+              "type": "string"
+            },
+            {
+              "id": "aa4cacd5-f254-4f49-b90e-eb76570bc3a5",
+              "name": "pipeline_run_id",
+              "value": "={{ $json.payload.ci_cd_execution.pipeline_run_id }}",
+              "type": "number"
+            },
+            {
+              "id": "618fc876-f82d-4693-8a2a-cf272dae706a",
+              "name": "pipeline_result",
+              "value": "={{ $json.payload.ci_cd_execution.pipeline_result }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "cd708d3c-3e46-4f15-9160-1aba9aab08ee",
+      "name": "01 - Extract WF06 Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst missing = [];\n\nif (!input.execution_id) {\n  missing.push(\"execution_id\");\n}\n\nif (!input.payload) {\n  missing.push(\"payload\");\n}\n\nif (!input.workflow_history) {\n  missing.push(\"workflow_history\");\n}\n\nif (!input.branch_name) {\n  missing.push(\"branch_name\");\n}\n\nif (!input.pipeline_run_id) {\n  missing.push(\"pipeline_run_id\");\n}\n\nif (missing.length > 0) {\n\n  return [\n    {\n      json: {\n        ...input,\n\n        reporting_validation: {\n          passed: false,\n          missing_fields: missing\n        },\n\n        current_workflow: \"WF07\",\n        next_workflow: \"WF08\",\n        status: \"BLOCKED\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      reporting_validation: {\n        passed: true\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2cea385b-f83e-4879-ba43-29382672d43e",
+      "name": "02 - Validate Execution Payload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "76a17cc7-7794-4f8f-8e01-7d6b1e3c1404",
+              "leftValue": "={{ $json.reporting_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "145b3fe5-de73-460d-b2d7-37107e241e68",
+      "name": "03 - IF Payload Valid?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a4bfb967-2050-4db9-be4f-abfb3acb0f76",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "71c2d4c0-f3ae-4096-93b6-60e0786c0279",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "82da8baa-a1d0-4507-a680-8a39716a3638",
+              "name": "current_workflow",
+              "value": "WF07",
+              "type": "string"
+            },
+            {
+              "id": "280a2d30-a6eb-4f2a-8512-3b02d18e5572",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "c548e9ce-61e5-4a67-9760-269cfcf1c87c",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "a3dd7f72-8fb6-401c-b9cf-8f7c39cb00ce",
+              "name": "quality_gate",
+              "value": "={\n  \"passed\": false,\n  \"blocking_issues\": [\n    \"Reporting payload invalid\"\n  ],\n  \"recommendation\": \"HUMAN_REVIEW\"\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        96
+      ],
+      "id": "66458e66-4092-487b-9783-0a2d96e271aa",
+      "name": "03B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst files =\n  input.generated_files || [];\n\nconst summary = {\n\n  execution_id:\n    input.execution_id,\n\n  work_item_id:\n    input.work_item_id,\n\n  title:\n    input.title,\n\n  workflow_count:\n    input.workflow_history.length,\n\n  workflows_executed:\n    input.workflow_history,\n\n  generated_files_count:\n    files.length,\n\n  branch_name:\n    input.branch_name,\n\n  pipeline_run_id:\n    input.pipeline_run_id,\n\n  pipeline_result:\n    input.pipeline_result,\n\n  execution_status:\n    \"SUCCESS\"\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      execution_summary: summary\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "7efda96b-7af6-4168-9aca-5631fa750adf",
+      "name": "04 - Generate Execution Summary"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate an industrial execution report.\n\nExecution Summary:\n{{ JSON.stringify($json.execution_summary) }}\n\nPipeline Analysis:\n{{ JSON.stringify($json.payload.ci_cd_execution.pipeline_analysis) }}\n\nReturn this JSON:\n\n{\n  \"industrial_report\": {\n    \"executive_summary\": \"\",\n    \"delivery_summary\": \"\",\n    \"quality_assessment\": \"\",\n    \"traceability_assessment\": \"\",\n    \"industrialization_assessment\": \"\",\n    \"final_recommendation\": \"\"\n  }\n}\n\nReturn ONLY valid JSON.\nNo markdown.\nNo explanations.\nNo comments.\nOutput must be parseable by JSON.parse().",
+        "options": {
+          "systemMessage": "You are an industrial software delivery auditor.\n\nYour role is to generate a concise but professional execution report for an AI Software Factory.\n\nYou must summarize:\n- user story processed\n- workflows executed\n- generated assets\n- repository activity\n- CI/CD execution\n- traceability\n- quality governance\n- industrial maturity\n\nReturn ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "1e24b67b-6fb7-4d3d-a119-ce7156045bb8",
+      "name": "05 - Build Industrial Report"
+    },
+    {
+      "parameters": {
+        "model": "hermes3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        16
+      ],
+      "id": "2a61bdb1-1d99-49fe-93f0-87ef4bf6ea5f",
+      "name": "Ollama Chat Model (Hermes)",
+      "credentials": {
+        "ollamaApi": {
+          "id": "p0mzco8CfGCSmy9I",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiOutput = $input.first().json;\n\nconst input =\n  $('04 - Generate Execution Summary').item.json;\n\nlet raw =\n  aiOutput.output ||\n  aiOutput.text ||\n  aiOutput.response ||\n  aiOutput.content;\n\nif (!raw) {\n  throw new Error(\"No AI report output found\");\n}\n\nif (typeof raw !== \"string\") {\n  raw = JSON.stringify(raw);\n}\n\nraw = raw.trim();\n\nconst firstBrace = raw.indexOf(\"{\");\nconst lastBrace = raw.lastIndexOf(\"}\");\n\nif (firstBrace === -1 || lastBrace === -1) {\n  throw new Error(\"No valid JSON found\");\n}\n\nconst jsonString =\n  raw.slice(firstBrace, lastBrace + 1);\n\nconst report =\n  JSON.parse(jsonString);\n\nconst traceability = {\n\n  work_item_id:\n    input.work_item_id,\n\n  title:\n    input.title,\n\n  workflows:\n    input.workflow_history,\n\n  repository_branch:\n    input.branch_name,\n\n  pipeline_run_id:\n    input.pipeline_run_id,\n\n  generated_files:\n    (input.generated_files || []).map(\n      file => file.path\n    )\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      industrial_report:\n        report.industrial_report,\n\n      traceability_matrix:\n        traceability\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -96
+      ],
+      "id": "3e2f7817-c133-42e1-8b57-e7e099bef144",
+      "name": "06 - Generate Traceability Matrix"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst payload =\n  input.payload;\n\nconst updatedPayload = {\n\n  ...payload,\n\n  factory: {\n    ...payload.factory,\n\n    current_workflow:\n      \"WF07\",\n\n    next_workflow:\n      null,\n\n    status:\n      \"COMPLETED\",\n\n    workflow_history: [\n      ...(payload.factory.workflow_history || []),\n      \"WF07\"\n    ]\n  },\n\n  industrial_report:\n    input.industrial_report,\n\n  traceability_matrix:\n    input.traceability_matrix\n};\n\nreturn [\n  {\n    json: {\n\n      execution_id:\n        input.execution_id,\n\n      payload:\n        updatedPayload,\n\n      current_workflow:\n        \"WF07\",\n\n      next_workflow:\n        null,\n\n      status:\n        \"COMPLETED\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -96
+      ],
+      "id": "a47d1fbd-e9d6-4e86-a4a3-f1b662758aa3",
+      "name": "07 - Prepare Final Execution Payload"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1808,
+        96
+      ],
+      "id": "50b0c64c-0bd5-4bda-9f99-c7512e710600",
+      "name": "08 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75fa2912-1088-4820-9e68-47acde67c0fc",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6c36959b-ea2c-4ad4-9385-329c15bfd611",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "bd46bc78-401f-4330-b1a7-21f6e1f20eba",
+              "name": "current_workflow",
+              "value": "WF07",
+              "type": "string"
+            },
+            {
+              "id": "71e77d93-72fc-4913-9600-2335ad233cac",
+              "name": "next_workflow",
+              "value": "={{ null }}",
+              "type": "object"
+            },
+            {
+              "id": "16edc2dc-6245-4b15-afd4-cc4e26548c68",
+              "name": "status",
+              "value": "COMPLETED",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2032,
+        96
+      ],
+      "id": "a7b8c908-02e0-4cd9-8b2a-853ce787bec2",
+      "name": "09 - Return Final Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract WF06 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract WF06 Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate Execution Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate Execution Payload": {
+      "main": [
+        [
+          {
+            "node": "03 - IF Payload Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - IF Payload Valid?": {
+      "main": [
+        [
+          {
+            "node": "04 - Generate Execution Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "03B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Generate Execution Summary": {
+      "main": [
+        [
+          {
+            "node": "05 - Build Industrial Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model (Hermes)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "05 - Build Industrial Report",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Build Industrial Report": {
+      "main": [
+        [
+          {
+            "node": "06 - Generate Traceability Matrix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Generate Traceability Matrix": {
+      "main": [
+        [
+          {
+            "node": "07 - Prepare Final Execution Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Prepare Final Execution Payload": {
+      "main": [
+        [
+          {
+            "node": "08 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "09 - Return Final Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "08 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "99aeeb34-f415-4d5c-bbf4-795c747172ad",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "bgYieN8H9BXUfZNY",
+  "tags": []
+}
