@@ -32,7 +32,7 @@ A local n8n_data directory for persistent n8n data
 Clone the Project Repository
 Open a terminal and clone the project repository.
 Replace the URL if another remote is used.
-git clone <repository-url>
+git clone [<repository-url>](https://AI-Workflow-Nutrition@dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_git/AI-Workflow-Nutrition)
 cd AI-Workflow-Nutrition
 
 <br>
