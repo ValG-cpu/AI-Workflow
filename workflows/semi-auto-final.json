@@ -189,7 +189,11 @@
       "parameters": {
         "resume": "webhook",
         "options": {
-          "webhookSuffix": "design-approval"
+          "webhookSuffix": "design-approval",
+          "limitWaitTime": true,
+          "limitType": "afterTimeInterval",
+          "resumeAmount": 24,
+          "resumeUnit": "hours"
         }
       },
       "type": "n8n-nodes-base.wait",
@@ -452,7 +456,11 @@
       "parameters": {
         "resume": "webhook",
         "options": {
-          "webhookSuffix": "production-approval"
+          "webhookSuffix": "production-approval",
+          "limitWaitTime": true,
+          "limitType": "afterTimeInterval",
+          "resumeAmount": 24,
+          "resumeUnit": "hours"
         }
       },
       "type": "n8n-nodes-base.wait",
@@ -824,7 +832,11 @@
       "parameters": {
         "resume": "webhook",
         "options": {
-          "webhookSuffix": "gono-approval"
+          "webhookSuffix": "gono-approval",
+          "limitWaitTime": true,
+          "limitType": "afterTimeInterval",
+          "resumeAmount": 24,
+          "resumeUnit": "hours"
         }
       },
       "type": "n8n-nodes-base.wait",
@@ -911,6 +923,87 @@
       ],
       "id": "88ff6106-384d-48e0-8ecf-a8b89f0539a8",
       "name": "Call Ollama Design Thinking"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $json;\nconst report = input.full_lifecycle_report || 'No report generated';\n\n// Convert to base64 for n8n binary\nconst base64 = Buffer.from(report, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    ...input,\n    export_status: 'ready',\n    filename: 'lifecycle-report-' + new Date().toISOString().slice(0,10) + '.txt',\n    message: 'Report ready for download in Binary tab'\n  },\n  binary: {\n    lifecycle_report_txt: {\n      data: base64,\n      mimeType: 'text/plain',\n      fileName: 'AI-Workflow-Nutrition-Lifecycle-Report.txt',\n      fileExtension: 'txt'\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        2100
+      ],
+      "id": "node-export-txt",
+      "name": "Export Lifecycle Report TXT"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cg1",
+              "name": "prompt",
+              "value": "=Generate ONLY the content of app.py for a Flask nutrition web application using the Swiss BLV Food API.\nRoutes needed:\n- GET / returns index.html\n- GET /search?q= searches Swiss Food API at https://api.webapp.prod.blv.foodcase-services.com/BLV_WebApp_WS/webresources/BLV-api/food?lang=fr&search=QUERY\n- POST /api/daily/add adds food to session\n- GET /api/daily/get returns daily intake from session\n- POST /api/daily/reset clears session\n\nReturn ONLY Python code. No explanations. Start with: from flask import",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        2100
+      ],
+      "id": "node-codegen-prompt",
+      "name": "Set Code Generation Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        920,
+        2100
+      ],
+      "id": "node-codegen-call",
+      "name": "Call Ollama Code Generation"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $json.response || $json.data || JSON.stringify($json);\n\n// Get TXT report binary from previous node\nlet txtBinary = null;\ntry {\n  const txtItems = $items('Export Lifecycle Report TXT');\n  if (txtItems && txtItems[0] && txtItems[0].binary) {\n    txtBinary = txtItems[0].binary.lifecycle_report_txt;\n  }\n} catch(e) {}\n\n// Extract code from Ollama response\nlet code = typeof raw === 'string' ? raw : JSON.stringify(raw);\ntry {\n  const lines = code.split('\\n').map(l => l.trim()).filter(Boolean);\n  let rec = '';\n  for (const l of lines) {\n    try { const o = JSON.parse(l); if (o.response) rec += o.response; } catch(e) {}\n  }\n  if (rec) code = rec;\n} catch(e) {}\n\ncode = code.replace(/^```python\\s*/i,'').replace(/^```\\s*/i,'').replace(/\\s*```$/i,'').trim();\n\nconst base64Code = Buffer.from(code, 'utf8').toString('base64');\n\nconst binary = {\n  app_py: {\n    data: base64Code,\n    mimeType: 'text/x-python',\n    fileName: 'app.py',\n    fileExtension: 'py'\n  }\n};\n\nif (txtBinary) {\n  binary.lifecycle_report_txt = txtBinary;\n}\n\nreturn [{\n  json: {\n    pipeline_status: 'COMPLETED',\n    workflow: 'central-workflow-semi-auto-v9',\n    mode: 'semi-autonomous',\n    human_checkpoints_passed: 3,\n    steps_completed: [\n      '1 \u2014 Design Thinking',\n      '2 \u2014 Architecture',\n      '3 \u2014 Production',\n      '4 \u2014 Test & Improvement',\n      '5 \u2014 Security',\n      '6 \u2014 Deployment & Maintenance',\n      '7 \u2014 Final Package',\n      '8 \u2014 Code Generation'\n    ],\n    generated_files: ['lifecycle-report.txt', 'app.py'],\n    app_py_preview: code.slice(0, 300),\n    message: 'Download app.py and lifecycle-report.txt from the Binary tab.'\n  },\n  binary\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        2100
+      ],
+      "id": "node-codegen-parse",
+      "name": "Package Generated Code"
     }
   ],
   "pinData": {},
@@ -1327,6 +1420,50 @@
         [
           {
             "node": "Parse Design Thinking JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Full Lifecycle Package": {
+      "main": [
+        [
+          {
+            "node": "Export Lifecycle Report TXT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Lifecycle Report TXT": {
+      "main": [
+        [
+          {
+            "node": "Set Code Generation Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Code Generation Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Code Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Code Generation": {
+      "main": [
+        [
+          {
+            "node": "Package Generated Code",
             "type": "main",
             "index": 0
           }
