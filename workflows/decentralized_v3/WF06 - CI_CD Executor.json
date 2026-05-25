@@ -1,0 +1,1061 @@
+{
+  "name": "WF06 - CI/CD Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a22010d6-eebf-4799-b486-ee706081d0b5",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b774b916-5a87-4429-966a-05e0d46125cc",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "dffcee65-ae05-45ec-94fd-d1436e99911d",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "927a5044-d63d-4243-81f5-4a9215fc35db",
+              "name": "branch_name",
+              "value": "={{ $json.payload.repository_execution.branch_name }}",
+              "type": "string"
+            },
+            {
+              "id": "dd6442d8-9996-4372-846c-f89aa7811488",
+              "name": "repository_url",
+              "value": "={{ $json.payload.repository_execution.repository_url }}",
+              "type": "string"
+            },
+            {
+              "id": "53c9724f-151d-44c2-a9c5-a9d996ef9694",
+              "name": "work_item_id",
+              "value": "={{ $json.payload.ado.work_item_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ],
+      "id": "12da1c44-7b28-4d92-bfe8-317fe7f6a7e7",
+      "name": "01 - Extract WF05 Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst branch =\n  input.branch_name;\n\nif (!branch) {\n\n  return [\n    {\n      json: {\n        ...input,\n\n        ci_validation: {\n          passed: false,\n          reason: \"Missing branch name\"\n        },\n\n        current_workflow: \"WF06\",\n        next_workflow: \"WF08\",\n        status: \"BLOCKED\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      ci_validation: {\n        passed: true\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "fe893f23-2a27-4dca-9e0f-7a0de2db8174",
+      "name": "02 - Validate Repository Execution"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f71da847-d0a3-4054-9c4d-87fa00342e9b",
+              "leftValue": "={{ $json.ci_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        656,
+        0
+      ],
+      "id": "d29fb1b4-42e3-4d94-b386-a297097f576a",
+      "name": "03 - IF Repository Valid?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "af915a95-7dda-4cad-b205-43cc94c851f3",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "babb6ac3-4aad-4ed9-a588-3520b7867193",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "777e49ec-df09-41b5-957b-7b2b15106661",
+              "name": "current_workflow",
+              "value": "WF06",
+              "type": "string"
+            },
+            {
+              "id": "746ca217-bbf9-4329-be6f-23447124b1c5",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "a9e5e0e9-b5e0-42b1-af31-c59fa7c89819",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "018580a2-95b1-46e2-9227-d456509b94fa",
+              "name": "quality_gate",
+              "value": "={   \"passed\": false,   \"blocking_issues\": [     \"Repository execution invalid\"   ],   \"recommendation\": \"HUMAN_REVIEW\" }",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        96
+      ],
+      "id": "dc3bce2a-9ded-4a2b-8c90-2a81fca5c082",
+      "name": "03B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0cf5759-57bf-4e8c-a394-bcc3a2217e8a",
+              "name": "execution_id",
+              "value": "={{ $('01 - Extract WF05 Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "38b94da6-7ce5-4f94-aa98-c014455f23e2",
+              "name": "payload",
+              "value": "={{ $('01 - Extract WF05 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "bf02cd4d-aa32-470d-8b57-3fab8070a218",
+              "name": "branch_name",
+              "value": "={{ $('01 - Extract WF05 Payload').item.json.branch_name }}",
+              "type": "string"
+            },
+            {
+              "id": "131757fa-5979-4d3a-b4cb-9b46caebe534",
+              "name": "workflow_name",
+              "value": "main.yml",
+              "type": "string"
+            },
+            {
+              "id": "b16d6cec-88c7-415e-bc7e-33f44bc17dbf",
+              "name": "repository",
+              "value": "Nutrition-App",
+              "type": "string"
+            },
+            {
+              "id": "9be11d62-cbcc-433d-b090-2d5536df3ba4",
+              "name": "owner",
+              "value": "ValG-cpu",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        -96
+      ],
+      "id": "92427b34-264c-46c2-8ba0-d9ab68ade206",
+      "name": "05 - Extract Pipeline Run Info"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        -96
+      ],
+      "id": "7bd8dbf7-d810-462c-9f6d-077be23bf2a3",
+      "name": "06 - Wait Before Polling",
+      "webhookId": "2afd201b-6944-4007-b966-b2313e22b736"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d3197f29-1147-4009-bd87-df6ddb4ced38",
+              "leftValue": "={{ $('07C - Analyze GitHub Workflow Result').item.json.pipeline_analysis.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1952,
+        -96
+      ],
+      "id": "58a77eb1-87af-4afc-91ba-ea509e27c1c3",
+      "name": "08 - IF Pipeline Succeeded?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0321d4a-02cc-4d76-b33c-7b4210f8b846",
+              "name": "execution_id",
+              "value": "={{ $('05 - Extract Pipeline Run Info').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5520dd1b-a593-433f-86f7-ef19815bf8d4",
+              "name": "payload",
+              "value": "={{ $('01 - Extract WF05 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "7b0a647a-8a0f-4c33-b0d6-5c0b9b6b8adb",
+              "name": "current_workflow",
+              "value": "WF06",
+              "type": "string"
+            },
+            {
+              "id": "fcd4ac7e-df3f-4dea-9061-319911e5203b",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "9ddb900b-758d-4245-ad45-fa36c5952dba",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "4709d51b-c52a-4433-8e11-19cd845ce723",
+              "name": "quality_gate",
+              "value": "={\n  \"passed\": false,\n  \"blocking_issues\": [\n    \"CI/CD pipeline failed\"\n  ],\n  \"recommendation\": \"HUMAN_REVIEW\"\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2160,
+        0
+      ],
+      "id": "c6f726d5-fe63-43ac-8e83-b11df13b3543",
+      "name": "08B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst previous =\n  $('05 - Extract Pipeline Run Info')\n    .item.json;\n\nconst payload =\n  previous.payload;\n\nconst updatedPayload = {\n\n  ...payload,\n\n  factory: {\n    ...payload.factory,\n\n    current_workflow: \"WF06\",\n    next_workflow: \"WF07\",\n    status: \"RUNNING\",\n\n    workflow_history: [\n      ...(payload.factory.workflow_history || []),\n      \"WF06\"\n    ]\n  },\n\n  ci_cd_execution: {\n\n    pipeline_run_id:\n  $('07C - Analyze GitHub Workflow Result')\n    .item.json.pipeline_analysis.pipeline_run_id,\n\n    pipeline_result:\n  $('07C - Analyze GitHub Workflow Result')\n    .item.json.pipeline_analysis.pipeline_result,\n\n    github_run_url:\n  $('07C - Analyze GitHub Workflow Result')\n    .item.json.pipeline_analysis.github_run_url,\n\n    pipeline_analysis:\n      $('07C - Analyze GitHub Workflow Result')\n      .item.json.pipeline_analysis\n  }\n};\n\nreturn [\n  {\n    json: {\n\n      execution_id:\n        previous.execution_id,\n\n      payload:\n        updatedPayload,\n\n      current_workflow:\n        \"WF06\",\n\n      next_workflow:\n        \"WF07\",\n\n      status:\n        \"RUNNING\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        -192
+      ],
+      "id": "71389a15-ac1d-4a08-8f35-df97451186eb",
+      "name": "09 - Prepare WF07 Payload"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "56032a2a-1629-4ea0-bfc1-d31ba4a75bab",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "986a03f8-dbe6-455a-8cc0-4235fda57940",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "021b0503-8be8-463e-94ed-8bb790782e71",
+              "name": "current_workflow",
+              "value": "WF06",
+              "type": "string"
+            },
+            {
+              "id": "681be99b-de3d-43ae-b8cf-d8fde371c707",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "f66f83ea-768d-4d5a-8fb6-9daea53eafc3",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "c61a9027-6b40-4f6e-8749-16f97691de3d",
+              "name": "quality_gate",
+              "value": "={{ $json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2384,
+        128
+      ],
+      "id": "410cb197-850b-4f16-90c7-686b1c8b6599",
+      "name": "08C - Restore WF06 Payload"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "07bb17a9-3dd0-41f1-821e-bb5851816e51",
+              "name": "execution_id",
+              "value": "={{ $('09 - Prepare WF07 Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "97c08e57-c7ed-4ada-ab04-38ec5d0773df",
+              "name": "payload",
+              "value": "={{ $('09 - Prepare WF07 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "820a500d-fd7e-4a84-9e24-ad5e10f7d954",
+              "name": "current_workflow",
+              "value": "WF06",
+              "type": "string"
+            },
+            {
+              "id": "01312ca4-b27b-41e4-9f4a-c7899100e23d",
+              "name": "next_workflow",
+              "value": "={{ $('09 - Prepare WF07 Payload').item.json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "ff8ece12-bec7-4222-a5eb-256edd989879",
+              "name": "status",
+              "value": "={{ $('09 - Prepare WF07 Payload').item.json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2864,
+        -192
+      ],
+      "id": "a17114cd-d4cf-4b1b-81bc-cf5a1334f21e",
+      "name": "11A - Return Success"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "07bb17a9-3dd0-41f1-821e-bb5851816e51",
+              "name": "execution_id",
+              "value": "={{ $('08C - Restore WF06 Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "97c08e57-c7ed-4ada-ab04-38ec5d0773df",
+              "name": "payload",
+              "value": "={{ $('08C - Restore WF06 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "820a500d-fd7e-4a84-9e24-ad5e10f7d954",
+              "name": "current_workflow",
+              "value": "WF06",
+              "type": "string"
+            },
+            {
+              "id": "01312ca4-b27b-41e4-9f4a-c7899100e23d",
+              "name": "next_workflow",
+              "value": "={{ $('08C - Restore WF06 Payload').item.json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "ff8ece12-bec7-4222-a5eb-256edd989879",
+              "name": "status",
+              "value": "={{ $('08C - Restore WF06 Payload').item.json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2864,
+        128
+      ],
+      "id": "9fe58e16-f395-4c27-a952-eabf0e86197d",
+      "name": "11B - Return Blocked"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2624,
+        -192
+      ],
+      "id": "6eab71dd-afd8-4278-a533-1ca4b1cc8978",
+      "name": "10A - Update Success State"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2624,
+        128
+      ],
+      "id": "017db5c9-059a-4f1e-bc91-88813be88ecb",
+      "name": "10B - Update Blocked State"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/ValG-cpu/Nutrition-App/actions/workflows/main.yml/dispatches",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ref\": \"{{ $json.branch_name }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        864,
+        -96
+      ],
+      "id": "58b7630b-ec54-44ad-8520-7606be6f544e",
+      "name": "04 - Trigger GitHub Actions Workflow",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "CWiuNWlJVR4cd5Fz",
+          "name": "Github PAT"
+        },
+        "httpBearerAuth": {
+          "id": "kUFWOeJbB8Vl2nCK",
+          "name": "Github Bearer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const runs =\n  $('07 - Get Pipeline Status').item.json.workflow_runs || [];\n\nconst latestRun = runs[0];\n\nif (!latestRun) {\n  return [{\n    json: {\n      pipeline_analysis: {\n        success: false,\n        pending: false,\n        failed: true,\n        pipeline_state: \"NOT_FOUND\",\n        pipeline_result: \"NO_RUN\"\n      }\n    }\n  }];\n}\n\nconst isCompleted =\n  latestRun.status === \"completed\";\n\nconst isSuccess =\n  latestRun.conclusion === \"success\";\n\nconst isPending =\n  !isCompleted;\n\nconst isFailed =\n  isCompleted && latestRun.conclusion !== \"success\";\n\nreturn [{\n  json: {\n    pipeline_analysis: {\n      success: isSuccess,\n      pending: isPending,\n      failed: isFailed,\n      pipeline_state: latestRun.status,\n      pipeline_result: latestRun.conclusion,\n      pipeline_run_id: latestRun.id,\n      github_run_url: latestRun.html_url\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -96
+      ],
+      "id": "c4409e90-d003-4c61-84f2-77e576abd51d",
+      "name": "07C - Analyze GitHub Workflow Result"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repository}}/actions/runs?branch={{$json.branch_name}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1488,
+        -96
+      ],
+      "id": "a168f194-17f8-4644-b3de-5226e8ca8e7a",
+      "name": "07 - Get Pipeline Status",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "CWiuNWlJVR4cd5Fz",
+          "name": "Github PAT"
+        },
+        "httpBearerAuth": {
+          "id": "GAtkH21ZqTcjuZEJ",
+          "name": "Bearer Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract WF05 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract WF05 Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate Repository Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate Repository Execution": {
+      "main": [
+        [
+          {
+            "node": "03 - IF Repository Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - IF Repository Valid?": {
+      "main": [
+        [
+          {
+            "node": "04 - Trigger GitHub Actions Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "03B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Extract Pipeline Run Info": {
+      "main": [
+        [
+          {
+            "node": "06 - Wait Before Polling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Wait Before Polling": {
+      "main": [
+        [
+          {
+            "node": "07 - Get Pipeline Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - IF Pipeline Succeeded?": {
+      "main": [
+        [
+          {
+            "node": "09 - Prepare WF07 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "08B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 - Prepare WF07 Payload": {
+      "main": [
+        [
+          {
+            "node": "10A - Update Success State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "08C - Restore WF06 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "08C - Restore WF06 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08C - Restore WF06 Payload": {
+      "main": [
+        [
+          {
+            "node": "10B - Update Blocked State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10A - Update Success State": {
+      "main": [
+        [
+          {
+            "node": "11A - Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10B - Update Blocked State": {
+      "main": [
+        [
+          {
+            "node": "11B - Return Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Trigger GitHub Actions Workflow": {
+      "main": [
+        [
+          {
+            "node": "05 - Extract Pipeline Run Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07C - Analyze GitHub Workflow Result": {
+      "main": [
+        [
+          {
+            "node": "08 - IF Pipeline Succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Get Pipeline Status": {
+      "main": [
+        [
+          {
+            "node": "07C - Analyze GitHub Workflow Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9237eefc-1e97-46c8-a7b2-ebdf147e77d9",
+  "meta": {
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "7PcIXxEsIaR3KKqC",
+  "tags": []
+}

@@ -1,0 +1,624 @@
+{
+  "name": "WF01 - Requirement Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -32,
+        48
+      ],
+      "id": "0d21f5af-ef6d-4a5d-9f9c-0419f3dd2270",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ed33c9eb-36d3-46ba-bcdc-022eab8bb2ee",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "bcacd304-5970-4216-ad1f-e2677fa027d7",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "b39554ed-f1cd-45d2-a91d-3649e3f694fd",
+              "name": "title",
+              "value": "={{ $json.payload.ado.title }}",
+              "type": "string"
+            },
+            {
+              "id": "3b741958-d34b-433b-85c8-8b27dd933c21",
+              "name": "description",
+              "value": "={{ $json.payload.ado.description }}",
+              "type": "string"
+            },
+            {
+              "id": "2e395af7-b97a-473f-ad8d-fbf759f073e5",
+              "name": "acceptance_criteria",
+              "value": "={{ $json.payload.ado.acceptance_criteria }}",
+              "type": "string"
+            },
+            {
+              "id": "1087c59a-fc9d-40f0-ad72-936798d72304",
+              "name": "work_item_id",
+              "value": "={{ $json.payload.ado.work_item_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        48
+      ],
+      "id": "dafcde25-a70f-4c1d-8073-323035095e8e",
+      "name": "01 - Extract Factory Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst missing = [];\n\nif (!input.execution_id) {\n  missing.push(\"execution_id\");\n}\n\nif (!input.payload) {\n  missing.push(\"payload\");\n}\n\nif (!input.title) {\n  missing.push(\"title\");\n}\n\nif (!input.description) {\n  missing.push(\"description\");\n}\n\nif (!input.acceptance_criteria) {\n  missing.push(\"acceptance_criteria\");\n}\n\nif (missing.length > 0) {\n  return [\n    {\n      json: {\n        ...input,\n        requirement_validation: {\n          passed: false,\n          missing_fields: missing\n        },\n        factory_decision: {\n          status: \"BLOCKED\",\n          next_workflow: \"WF08\",\n          reason: \"Missing required User Story fields\"\n        }\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      requirement_validation: {\n        passed: true,\n        missing_fields: []\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        48
+      ],
+      "id": "951968a4-da4a-4721-90d8-d046fd7aeaa2",
+      "name": "02 - Validate Required Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "69e185ee-d01c-4f43-9d39-d0bdab8700e0",
+              "leftValue": "={{ $json.requirement_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        48
+      ],
+      "id": "346242d3-00db-49c7-8081-ee64ca520e1b",
+      "name": "03 — IF Required Fields Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet raw =\n  input.output ||\n  input.text ||\n  input.response ||\n  input.message ||\n  input.content ||\n  input.result ||\n  input.choices?.[0]?.message?.content;\n\nif (!raw) {\n  return [\n    {\n      json: {\n        ...input,\n        wf01_result: {\n          requirement_analysis: {\n            is_ready_for_design: false,\n            summary: \"No AI output found\",\n            ambiguities: [],\n            missing_information: [\"AI model returned no readable output\"],\n            risks: [],\n            normalized_user_story: \"\",\n            validated_acceptance_criteria: []\n          },\n          quality_gate: {\n            passed: false,\n            blocking_issues: [\"No AI output found\"],\n            recommendation: \"HUMAN_REVIEW\"\n          },\n          next_workflow: \"WF08\"\n        }\n      }\n    }\n  ];\n}\n\nif (typeof raw !== \"string\") {\n  raw = JSON.stringify(raw);\n}\n\nraw = raw\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\nconst firstBrace = raw.indexOf(\"{\");\nconst lastBrace = raw.lastIndexOf(\"}\");\n\nif (firstBrace === -1 || lastBrace === -1) {\n  return [\n    {\n      json: {\n        ...input,\n        wf01_result: {\n          requirement_analysis: {\n            is_ready_for_design: false,\n            summary: \"AI output did not contain valid JSON\",\n            ambiguities: [],\n            missing_information: [\"Invalid JSON structure\"],\n            risks: [],\n            normalized_user_story: \"\",\n            validated_acceptance_criteria: []\n          },\n          quality_gate: {\n            passed: false,\n            blocking_issues: [\"AI output did not contain valid JSON\"],\n            recommendation: \"HUMAN_REVIEW\"\n          },\n          next_workflow: \"WF08\"\n        }\n      }\n    }\n  ];\n}\n\nconst jsonString = raw.slice(firstBrace, lastBrace + 1);\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(jsonString);\n}\ncatch (error) {\n  return [\n    {\n      json: {\n        ...input,\n        wf01_result: {\n          requirement_analysis: {\n            is_ready_for_design: false,\n            summary: \"AI output JSON could not be parsed\",\n            ambiguities: [],\n            missing_information: [error.message],\n            risks: [],\n            normalized_user_story: \"\",\n            validated_acceptance_criteria: []\n          },\n          quality_gate: {\n            passed: false,\n            blocking_issues: [\"AI output JSON parse failed\"],\n            recommendation: \"HUMAN_REVIEW\"\n          },\n          next_workflow: \"WF08\"\n        }\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf01_result: parsed\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        -112
+      ],
+      "id": "563a4d7f-8985-4f3c-9919-2aff2ce13181",
+      "name": "05 - Parse AI JSON Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst original =\n  $('01 - Extract Factory Payload').item.json;\n\nconst payload =\n  original.payload;\n\nconst result =\n  input.wf01_result;\n\nconst passed =\n  result.requirement_analysis?.is_ready_for_design !== false &&\n  result.quality_gate?.recommendation !== \"REJECT\";\n\nconst nextWorkflow =\n  passed ? \"WF02\" : \"WF08\";\n\nconst updatedPayload = {\n  ...payload,\n\n  factory: {\n    ...payload.factory,\n    current_workflow: \"WF01\",\n    next_workflow: nextWorkflow,\n    status: passed ? \"RUNNING\" : \"BLOCKED\",\n\n    workflow_history: [\n      ...(payload.factory.workflow_history || [\"WF00\"]),\n      \"WF01\"\n    ]\n  },\n\n  requirement_analysis:\n    result.requirement_analysis,\n\n  quality_gate:\n    result.quality_gate,\n\n  artifacts: [\n    ...(payload.artifacts || []),\n    {\n      workflow: \"WF01\",\n      type: \"requirement_analysis\",\n      name: \"requirement_analysis.json\",\n      content: result\n    }\n  ]\n};\n\nreturn [\n  {\n    json: {\n      execution_id: original.execution_id,\n      payload: updatedPayload,\n      current_workflow: \"WF01\",\n      next_workflow: nextWorkflow,\n      status: updatedPayload.factory.status,\n      quality_gate: result.quality_gate\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -112
+      ],
+      "id": "c072949c-2b31-4100-939b-ef4cc0a726ce",
+      "name": "06 - Prepare Next Payload"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "execution_id": "={{ $json.execution_id }}",
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}",
+            "retry_count": "={{ $json.payload.factory.retry_count }}",
+            "work_item_id": "={{ $json.payload.ado.work_item_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1632,
+        48
+      ],
+      "id": "2c2653c7-79ea-447c-9a77-078036b5f766",
+      "name": "07 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f92591ff-acda-4991-acc6-1ae6f1568136",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "c012cc00-4063-4d31-81e2-f365495ee3b3",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "07a9b4db-fe90-4a57-ad29-d2db85c7ca17",
+              "name": "current_workflow",
+              "value": "WF01",
+              "type": "string"
+            },
+            {
+              "id": "995a3e82-0ddc-4a6f-a4ec-652bca3031ed",
+              "name": "next_workflow",
+              "value": "={{ $json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "d499dfd4-93cc-48ef-b5a3-413d74947aa7",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "a467457b-54a2-488d-8de8-76905742bad0",
+              "name": "quality_gate",
+              "value": "={{ $json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2048,
+        48
+      ],
+      "id": "b9e06d77-cf65-43fc-9d28-dcddec98353f",
+      "name": "08 - Return WF01 Result"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "659a38d0-27c2-4f93-9dbd-c5c324b33f6a",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "b77b7e11-a726-496b-aa41-a6d464b99030",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "c989f5f5-f7de-477e-8e76-6a5b45e690e0",
+              "name": "current_workflow",
+              "value": "WF01",
+              "type": "string"
+            },
+            {
+              "id": "66cac0e0-04b3-4075-912e-e17e1a802f82",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "8d179127-7eb4-41a4-9379-62b317f28ef8",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        224
+      ],
+      "id": "fac51e17-0dd6-47bd-a7e7-a172dbb20272",
+      "name": "04B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this User Story. All fields below are already present and must be considered valid input.\n\nTitle:\n{{ $json.title }}\n\nDescription:\n{{ $json.description }}\n\nAcceptance Criteria:\n{{ $json.acceptance_criteria }}\n\nReturn this exact JSON structure:\n\n{\n  \"requirement_analysis\": {\n    \"clarity_score\": 4,\n    \"completeness_score\": 4,\n    \"acceptance_criteria_score\": 4,\n    \"technical_feasibility_score\": 4,\n    \"overall_score\": 16,\n    \"is_ready_for_design\": true,\n    \"summary\": \"\",\n    \"ambiguities\": [],\n    \"missing_information\": [],\n    \"risks\": [],\n    \"normalized_user_story\": \"\",\n    \"validated_acceptance_criteria\": []\n  },\n  \"quality_gate\": {\n    \"passed\": true,\n    \"blocking_issues\": [],\n    \"recommendation\": \"CONTINUE\"\n  },\n  \"next_workflow\": \"WF02\"\n}",
+        "options": {
+          "systemMessage": "=You are a senior business analyst inside an AI Software Factory.\n\nYou analyze one Azure DevOps User Story.\n\nApplication scope:\nMinimal local Python macro calculator.\n\nHard constraints:\n- No FastAPI\n- No users\n- No authentication\n- No authorization\n- No database\n- No SQLAlchemy\n- No PostgreSQL\n- No MongoDB\n- No external APIs\n- No frontend\n- No Docker\n- No microservices\n\nAllowed scope:\n- simple Python functions\n- pytest\n- local invented nutrition data\n- deterministic calculations\n\nImportant:\n- The title, description and acceptance criteria are provided in the user message.\n- You must not claim that title, description or acceptance criteria are missing when they are present.\n- Evaluate the actual provided text only.\n- Do not invent missing fields.\n- If the user story contains a clear role, goal and expected behavior, it is ready for technical design.\n- If acceptance criteria describe at least one behavior, the quality gate should pass.\n- Be pragmatic.\n- Do not over-block simple implementation-ready user stories.\n- Do not invent architecture complexity.\n- Do not suggest auth, users, APIs, services, repositories, or databases.\n\nCritical JSON rules:\n- Return only valid JSON\n- No markdown\n- No explanations\n- No comments\n- No trailing commas\n- No extra keys\n- Output must be parseable by JSON.parse()\n\nYou must never change the workflow payload structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        832,
+        -112
+      ],
+      "id": "b8d9ecf1-2825-458f-9d08-05ea20a1ccd5",
+      "name": "04 - AI Requirement Analyst"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "baee5181-1f3a-4b4a-9b08-866f461a934a",
+              "name": "execution_id",
+              "value": "={{ $('06 - Prepare Next Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0e797530-0fac-4acd-8522-e34fe031ea24",
+              "name": "payload",
+              "value": "={{ $('06 - Prepare Next Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "dc5f08e9-1799-4ea3-9da5-f895177d9e39",
+              "name": "current_workflow",
+              "value": "={{ $('06 - Prepare Next Payload').item.json.current_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "0b2d9376-0858-4046-a856-cddace323d94",
+              "name": "next_workflow",
+              "value": "={{ $('06 - Prepare Next Payload').item.json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "f3e26b10-eded-4966-ad36-2e40075a036f",
+              "name": "status",
+              "value": "={{ $('06 - Prepare Next Payload').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "295f4574-82e8-4c7b-87d3-ac42d2ba84e5",
+              "name": "quality_gate",
+              "value": "={{ $('06 - Prepare Next Payload').item.json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        48
+      ],
+      "id": "6ca4e48c-7d68-4cf0-8ccb-0d75bf02d59f",
+      "name": "07B - Restore WF01 Payload"
+    },
+    {
+      "parameters": {
+        "model": "hermes3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        832,
+        64
+      ],
+      "id": "3104553a-87e3-4758-b409-8eafb73b7974",
+      "name": "Ollama Chat Model (Hermes)",
+      "credentials": {
+        "ollamaApi": {
+          "id": "p0mzco8CfGCSmy9I",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract Factory Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract Factory Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "03 — IF Required Fields Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 — IF Required Fields Valid?": {
+      "main": [
+        [
+          {
+            "node": "04 - AI Requirement Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Parse AI JSON Output": {
+      "main": [
+        [
+          {
+            "node": "06 - Prepare Next Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Prepare Next Payload": {
+      "main": [
+        [
+          {
+            "node": "07 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "07B - Restore WF01 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "07 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - AI Requirement Analyst": {
+      "main": [
+        [
+          {
+            "node": "05 - Parse AI JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07B - Restore WF01 Payload": {
+      "main": [
+        [
+          {
+            "node": "08 - Return WF01 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model (Hermes)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "04 - AI Requirement Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "de1e0580-9c03-4367-bdc4-82c1d2c42626",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "17xqAaEhPGpV7mnV",
+  "tags": []
+}

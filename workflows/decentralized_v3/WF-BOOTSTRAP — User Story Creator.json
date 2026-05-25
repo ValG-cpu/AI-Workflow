@@ -1,0 +1,264 @@
+{
+  "name": "WF-BOOTSTRAP — User Story Creator",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f2d7838d-8f9a-48ec-ac70-d7668313d864",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1c64d57-4c0c-4334-80ae-32e47c0d8a6e",
+              "name": "user_stories",
+              "value": "=[\n  {\n    \"title\": \"[DECENTRALIZED] Create macro calculator module\",\n    \"description\": \"Create a simple Python module for macro calculation. The application does not use FastAPI, database, users, authentication, Docker, or external APIs.\",\n    \"acceptance_criteria\": \"A calculator module exists. It exposes a function calculate_total_macros(protein, carbs, fat). The function returns the sum of protein, carbs, and fat.\",\n    \"tags\": \"Decentralized;SEQ_001\"\n  },\n  {\n    \"title\": \"[DECENTRALIZED] Add calorie estimation function\",\n    \"description\": \"Add a simple Python function that estimates calories from protein, carbs, and fat using fixed values.\",\n    \"acceptance_criteria\": \"The function estimate_calories(protein, carbs, fat) returns protein * 4 + carbs * 4 + fat * 9.\",\n    \"tags\": \"Decentralized;SEQ_002\"\n  },\n  {\n    \"title\": \"[DECENTRALIZED] Add macro calculator tests\",\n    \"description\": \"Create pytest tests for the macro calculator functions.\",\n    \"acceptance_criteria\": \"pytest validates calculate_total_macros. pytest validates estimate_calories. All tests pass without external dependencies.\",\n    \"tags\": \"Decentralized;SEQ_003\"\n  },\n  {\n    \"title\": \"[DECENTRALIZED] Add sample meal data\",\n    \"description\": \"Create simple local sample meal data with invented nutrition values.\",\n    \"acceptance_criteria\": \"A sample data file or Python constant exists. It contains at least two food items with protein, carbs, and fat values.\",\n    \"tags\": \"Decentralized;SEQ_004\"\n  },\n  {\n    \"title\": \"[DECENTRALIZED] Add meal summary function\",\n    \"description\": \"Create a function that calculates total protein, carbs, fat, and calories from sample meal items.\",\n    \"acceptance_criteria\": \"The function summarize_meal returns total protein, total carbs, total fat, and estimated calories.\",\n    \"tags\": \"Decentralized;SEQ_005\"\n  }\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "fe9d190d-2811-42c9-a509-09f93e53610d",
+      "name": "01 - Set User Stories Batch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stories = $input.first().json.user_stories;\n\nif (!Array.isArray(stories)) {\n  throw new Error(\"user_stories must be an array\");\n}\n\nfor (const story of stories) {\n  if (!story.title) {\n    throw new Error(\"Missing title\");\n  }\n\n  if (!story.description) {\n    throw new Error(\"Missing description\");\n  }\n\n  if (!story.acceptance_criteria) {\n    throw new Error(\"Missing acceptance criteria\");\n  }\n\n  if (!story.tags || !story.tags.includes(\"Decentralized\")) {\n    throw new Error(\"Missing Decentralized tag\");\n  }\n}\n\nreturn [\n  {\n    json: {\n      user_stories: stories\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8eba4f03-b461-479d-9886-790f37390479",
+      "name": "02 - Validate Batch"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "user_stories",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "36395a05-33f8-4fa5-b8ee-44ba39b15c5d",
+      "name": "03 - Split User Stories"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://dev.azure.com/AI-Workflow-Nutrition/AI-Workflow-Nutrition/_apis/wit/workitems/$User%20Story?api-version=7.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json-patch+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.Title\",\n    \"value\": \"{{ $json.title }}\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.Description\",\n    \"value\": \"{{ $json.description }}\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/Microsoft.VSTS.Common.AcceptanceCriteria\",\n    \"value\": \"{{ $json.acceptance_criteria }}\"\n  },\n  {\n    \"op\": \"add\",\n    \"path\": \"/fields/System.Tags\",\n    \"value\": \"{{ $json.tags }}\"\n  }\n]",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        0
+      ],
+      "id": "66443960-cfb4-47f6-b65d-7dfd738f5c0e",
+      "name": "04 - Create Azure User Story",
+      "retryOnFail": false,
+      "notesInFlow": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "trC3ye6FdN1ahyrS",
+          "name": "Azure repo PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ee6f212f-6319-41a2-8904-a33ea8ca1f58",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "f8d5ea01-a4d5-4f48-ba9a-0dab3620d507",
+      "name": "05 - Check Created Work Item"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "08f71f5e-869b-4460-a399-3927aa72e38b",
+              "name": "work_item_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "8b163cbe-d5ec-4006-bfd2-fac8dce83482",
+              "name": "title",
+              "value": "={{ $json.fields[\"System.Title\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "d0172c55-6e05-4de6-a5c8-ebbf54f01675",
+              "name": "state",
+              "value": "={{ $json.fields[\"System.State\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        -128
+      ],
+      "id": "03c06e8a-62a6-427c-bca5-f011da41a00c",
+      "name": "06 - Extract Work Item Info"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "01 - Set User Stories Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Set User Stories Batch": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate Batch": {
+      "main": [
+        [
+          {
+            "node": "03 - Split User Stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Split User Stories": {
+      "main": [
+        [
+          {
+            "node": "04 - Create Azure User Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Create Azure User Story": {
+      "main": [
+        [
+          {
+            "node": "05 - Check Created Work Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Check Created Work Item": {
+      "main": [
+        [
+          {
+            "node": "06 - Extract Work Item Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "06 - Extract Work Item Info": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4ec807c1-6d95-4efc-832e-48a5879f5620",
+  "meta": {
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "7UDBiw28CCDZGtWI",
+  "tags": []
+}

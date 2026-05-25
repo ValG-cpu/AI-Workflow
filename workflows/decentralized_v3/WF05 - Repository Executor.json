@@ -1,0 +1,993 @@
+{
+  "name": "WF05 - Repository Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "04291f9f-2da7-4f5c-935d-e7a6b0b33edf",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b774b916-5a87-4429-966a-05e0d46125cc",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "dffcee65-ae05-45ec-94fd-d1436e99911d",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "927a5044-d63d-4243-81f5-4a9215fc35db",
+              "name": "generated_files",
+              "value": "={{ $json.payload.generated_files }}",
+              "type": "array"
+            },
+            {
+              "id": "dd6442d8-9996-4372-846c-f89aa7811488",
+              "name": "title",
+              "value": "={{ $json.payload.ado.title }}",
+              "type": "string"
+            },
+            {
+              "id": "53c9724f-151d-44c2-a9c5-a9d996ef9694",
+              "name": "work_item_id",
+              "value": "={{ $json.payload.ado.work_item_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "64ec5235-a055-4a78-8f35-1b6055236a44",
+      "name": "01 - Extract WF04 Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst files = input.generated_files || [];\n\nif (!Array.isArray(files) || files.length === 0) {\n  return [\n    {\n      json: {\n        ...input,\n        wf05_validation: {\n          passed: false,\n          reason: \"No generated files found\"\n        },\n        current_workflow: \"WF05\",\n        next_workflow: \"WF08\",\n        status: \"BLOCKED\"\n      }\n    }\n  ];\n}\n\nconst invalidFiles = files.filter(file => {\n  return !file.path || typeof file.content !== \"string\";\n});\n\nif (invalidFiles.length > 0) {\n  return [\n    {\n      json: {\n        ...input,\n        wf05_validation: {\n          passed: false,\n          reason: \"Invalid generated files\"\n        },\n        current_workflow: \"WF05\",\n        next_workflow: \"WF08\",\n        status: \"BLOCKED\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      wf05_validation: {\n        passed: true\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c897ed8f-d8be-4bf8-a9e7-0bfcafaf8a09",
+      "name": "02 - Validate Generated Files"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "eff83daa-549e-44dd-a797-9b2f8b7b71c8",
+              "leftValue": "={{ $json.wf05_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "c85541c0-6b0e-4353-9f91-0ce4ac6c8340",
+      "name": "03 - IF Files Valid?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0de72aa-d6af-4cc2-b2ba-a7065ef62ee8",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "202ac92a-4358-4b72-8059-3ae4c2c38142",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "16872f4e-9742-446c-adfc-5887d9c80dec",
+              "name": "current_workflow",
+              "value": "WF05",
+              "type": "string"
+            },
+            {
+              "id": "20a65c9c-4518-4b09-ba6d-4da874f54eab",
+              "name": "next_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "6a4f0e71-e80e-4a61-91f7-65005a6c03f0",
+              "name": "status",
+              "value": "BLOCKED",
+              "type": "string"
+            },
+            {
+              "id": "dca228ed-bbce-4a62-a4cf-da75057e5cd8",
+              "name": "quality_gate",
+              "value": "={\n  \"passed\": false,\n  \"blocking_issues\": [\"TDD design incomplete or invalid\"],\n  \"recommendation\": \"HUMAN_REVIEW\"\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        128
+      ],
+      "id": "0c82822e-2f1f-42d9-a963-fbfc00bef4b7",
+      "name": "03B - Prepare WF08 Escalation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst workItemId = input.work_item_id;\n\nconst executionId =\n  input.execution_id\n    .replace(/[^a-zA-Z0-9-]/g, \"-\")\n    .slice(0, 20);\n\nconst branchName =\n  `feature/wf05-us-${workItemId}-${executionId}`;\n\nreturn [\n  {\n    json: {\n      ...input,\n      branch_name: branchName\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -144
+      ],
+      "id": "99b1fe74-17f2-4579-9043-494ec4d2a2cd",
+      "name": "04 - Generate Branch Name"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dbfe84f8-eec3-47e7-9375-8cbd0e8c9641",
+              "name": "workspace_root",
+              "value": "/home/node/.n8n-files/github_workspace",
+              "type": "string"
+            },
+            {
+              "id": "c4a5e101-902e-4391-8063-a8da248d91df",
+              "name": "repo_path",
+              "value": "={{ `/home/node/.n8n-files/github_workspace/${$json.execution_id}` }}",
+              "type": "string"
+            },
+            {
+              "id": "579a9f3c-6cb5-4eee-a8a1-3c699071595f",
+              "name": "repo_url",
+              "value": "https://github.com/ValG-cpu/Nutrition-App.git",
+              "type": "string"
+            },
+            {
+              "id": "5d48164d-a6ab-4b3d-92eb-d47bbec1bb42",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "3d64991f-85ff-4334-b995-13fb255750d4",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "067f6ad7-ad85-40e3-9064-4cbc9b2d76b9",
+              "name": "generated_files",
+              "value": "={{ $json.generated_files }}",
+              "type": "array"
+            },
+            {
+              "id": "e9c15b49-4fb0-485c-8202-c53e515e9ae0",
+              "name": "work_item_id",
+              "value": "={{ $json.work_item_id }}",
+              "type": "number"
+            },
+            {
+              "id": "95039326-e328-4663-996c-09b25190a55b",
+              "name": "branch_name",
+              "value": "={{ $json.branch_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        -144
+      ],
+      "id": "757f4d94-a68b-4ea5-a1d4-d6655329b47e",
+      "name": "05 - Prepare Workspace Paths"
+    },
+    {
+      "parameters": {
+        "authentication": "gitPassword",
+        "operation": "clone",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "sourceRepository": "={{ $('05 - Prepare Workspace Paths').item.json.repo_url }}"
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        -144
+      ],
+      "id": "2d62597c-87e0-42e6-ac42-5aeb532b4b46",
+      "name": "06 - Clone Repository",
+      "credentials": {
+        "gitPassword": {
+          "id": "EIboams0wossiDAH",
+          "name": "Github PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "switchBranch",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "branchName": "={{ $('05 - Prepare Workspace Paths').item.json.branch_name }}",
+        "options": {
+          "createBranch": true
+        }
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        1728,
+        -144
+      ],
+      "id": "abf95a8c-ac0c-48b0-ab3b-f82d9a921e49",
+      "name": "07 - Create Git Branch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst context =\n  $('05 - Prepare Workspace Paths').item.json;\n\nconst repoPath = context.repo_path;\nconst files = context.generated_files;\n\nfor (const file of files) {\n\n  let relativePath =\n    (file.path || \"\")\n      .replace(/\\\\/g, \"/\")\n      .replace(/^\\/+/, \"\")\n      .replace(/^.*ai_factory_workspace\\/[^/]+\\//, \"\");\n\n  const fullPath =\n  path.join(repoPath, \"product-app\", relativePath);\n\n  const dir =\n    path.dirname(fullPath);\n\n  fs.mkdirSync(dir, {\n    recursive: true\n  });\n\n  fs.writeFileSync(\n    fullPath,\n    file.content,\n    \"utf8\"\n  );\n}\n\nreturn [\n  {\n    json: context\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        -144
+      ],
+      "id": "6bb55004-4b09-4614-a0ac-f7229f9df658",
+      "name": "08 - Write Generated Files"
+    },
+    {
+      "parameters": {
+        "operation": "status",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}"
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        2560,
+        -144
+      ],
+      "id": "16833298-a91e-49f4-81b8-28c0df36e996",
+      "name": "09 - Git Status"
+    },
+    {
+      "parameters": {
+        "operation": "add",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "pathsToAdd": "."
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        2768,
+        -144
+      ],
+      "id": "491a5e77-3abf-45bf-a5fa-5f956fffbb5c",
+      "name": "10 - Git Add"
+    },
+    {
+      "parameters": {
+        "operation": "commit",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "message": "={{ `AI Factory generated implementation for US ${$('05 - Prepare Workspace Paths').item.json.work_item_id}` }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        2976,
+        -144
+      ],
+      "id": "9218385b-81a9-4be7-aef7-d5cd8b229ae8",
+      "name": "11 - Git Commit"
+    },
+    {
+      "parameters": {
+        "authentication": "gitPassword",
+        "operation": "push",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "options": {
+          "branch": "={{ $('05 - Prepare Workspace Paths').item.json.branch_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        3184,
+        -144
+      ],
+      "id": "bc445021-5650-47f5-b556-a5b676c30d97",
+      "name": "12 - Git Push",
+      "credentials": {
+        "gitPassword": {
+          "id": "EIboams0wossiDAH",
+          "name": "Github PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input =\n  $('05 - Prepare Workspace Paths').item.json;\n\nconst original =\n  $('01 - Extract WF04 Payload').item.json;\n\nconst payload =\n  original.payload;\n\nconst updatedPayload = {\n  ...payload,\n\n  factory: {\n    ...payload.factory,\n    current_workflow: \"WF05\",\n    next_workflow: \"WF06\",\n    status: \"RUNNING\",\n\n    workflow_history: [\n      ...(payload.factory.workflow_history || []),\n      \"WF05\"\n    ]\n  },\n\n  repository_execution: {\n    repository_url: input.repo_url,\n    branch_name: input.branch_name,\n    commit_generated: true,\n    repository_path: input.repo_path\n  }\n};\n\nreturn [\n  {\n    json: {\n      execution_id: original.execution_id,\n      payload: updatedPayload,\n      current_workflow: \"WF05\",\n      next_workflow: \"WF06\",\n      status: \"RUNNING\",\n      quality_gate: {\n        passed: true,\n        blocking_issues: [],\n        recommendation: \"CONTINUE\"\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        -144
+      ],
+      "id": "2146fae9-f497-45f0-ad44-65aa9f572006",
+      "name": "14 - Prepare WF06 Payload"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3824,
+        128
+      ],
+      "id": "f8446df8-85df-4b32-aba9-bd8b5018cc7a",
+      "name": "15 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ada035eb-2f3f-4e82-8bb2-7e7f0b0d7b6d",
+              "name": "execution_id",
+              "value": "={{ $('05 - Prepare Workspace Paths').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8bc1ae37-32f5-47c1-9d8f-b62f8512471c",
+              "name": "payload",
+              "value": "={{ $('01 - Extract WF04 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "4cc8acf7-9131-44ea-a500-03537e1a9129",
+              "name": "repo_url",
+              "value": "={{ $('05 - Prepare Workspace Paths').item.json.repo_url }}",
+              "type": "string"
+            },
+            {
+              "id": "3fb6d7a1-d940-48a8-8980-47c9269333f1",
+              "name": "repo_path",
+              "value": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+              "type": "string"
+            },
+            {
+              "id": "b7dfe2aa-6026-4435-8b68-4954a979ac91",
+              "name": "branch_name",
+              "value": "={{ $('05 - Prepare Workspace Paths').item.json.branch_name }}",
+              "type": "string"
+            },
+            {
+              "id": "eb848a52-b634-4e58-8ff9-ccfd343be6e9",
+              "name": "work_item_id",
+              "value": "={{ $('05 - Prepare Workspace Paths').item.json.work_item_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3392,
+        -144
+      ],
+      "id": "473bab2c-e7e6-46d3-a93e-0f23c5feeb68",
+      "name": "13 - Restore Context"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "33cad1ee-fd7b-4763-8776-84d167d177ec",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1a252733-342e-49a6-b29d-bd6310222f0f",
+              "name": "payload",
+              "value": "={{ $('14 - Prepare WF06 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "3bfcd751-e3e5-4600-9ccf-07aca135f298",
+              "name": "current_workflow",
+              "value": "WF05",
+              "type": "string"
+            },
+            {
+              "id": "cda4025f-70a5-47fa-b0f5-4ae6f643513d",
+              "name": "next_workflow",
+              "value": "={{ $json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "74ad6c20-9e05-4c43-a35e-7d8f37447fa1",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4336,
+        128
+      ],
+      "id": "b8672d03-9cb8-4bf7-8c47-3c5e63f1de2b",
+      "name": "16 - Return WF05 Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require(\"fs\");\n\nconst input = $input.first().json;\n\nfs.mkdirSync(input.workspace_root, {\n  recursive: true\n});\n\nreturn [\n  {\n    json: input\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -352
+      ],
+      "id": "cd1f8443-ff3e-41dc-989f-1673c7b1627b",
+      "name": "05B - Ensure Workspace Exists"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "575401c7-1529-4f35-97fc-35f80a155fdd",
+              "name": "execution_id",
+              "value": "={{ $('14 - Prepare WF06 Payload').item.json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "03c8c2c6-97af-42f8-a682-819ffadc48f5",
+              "name": "payload",
+              "value": "={{ $('14 - Prepare WF06 Payload').item.json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "d53a42ce-7c58-4b07-8a42-e0a36ce207fd",
+              "name": "current_workflow",
+              "value": "WF05",
+              "type": "string"
+            },
+            {
+              "id": "d5d21f52-4e6e-4102-81e1-a3956b8ed61c",
+              "name": "next_workflow",
+              "value": "={{ $('14 - Prepare WF06 Payload').item.json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "dd012a64-683b-4201-8a74-fb8fbdc9ad40",
+              "name": "status",
+              "value": "={{ $('14 - Prepare WF06 Payload').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "9a860728-9987-4b39-8e92-2eca0b73d798",
+              "name": "quality_gate",
+              "value": "={{ $('14 - Prepare WF06 Payload').item.json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4080,
+        128
+      ],
+      "id": "353eb4bb-8380-48c1-ae0f-56efc0dc5a3f",
+      "name": "15B - Restore WF05 Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require(\"fs\");\n\nconst input = $input.first().json;\n\nif (input.repo_path && input.repo_path.startsWith(\"/home/node/.n8n-files/github_workspace/\")) {\n  fs.rmSync(input.repo_path, {\n    recursive: true,\n    force: true\n  });\n}\n\nfs.mkdirSync(input.workspace_root, {\n  recursive: true\n});\n\nreturn [\n  {\n    json: input\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -144
+      ],
+      "id": "66bb2181-7d65-4d60-9d3c-e4ae62cd17a5",
+      "name": "05C - Reset Execution Workspace"
+    },
+    {
+      "parameters": {
+        "operation": "addConfig",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "key": "user.name",
+        "value": "AI Software Factory",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        1936,
+        -144
+      ],
+      "id": "3e8c18dc-a66e-4bb4-a8a0-b93aef66e3fa",
+      "name": "07B - Git Config User Name"
+    },
+    {
+      "parameters": {
+        "operation": "addConfig",
+        "repositoryPath": "={{ $('05 - Prepare Workspace Paths').item.json.repo_path }}",
+        "key": "user.email",
+        "value": "ai-factory@n8n.local",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        2144,
+        -144
+      ],
+      "id": "1ad033cb-2bcb-409c-979e-d5002a2ba53c",
+      "name": "07C - Git Config User Email"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract WF04 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract WF04 Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate Generated Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate Generated Files": {
+      "main": [
+        [
+          {
+            "node": "03 - IF Files Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - IF Files Valid?": {
+      "main": [
+        [
+          {
+            "node": "04 - Generate Branch Name",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "03B - Prepare WF08 Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Generate Branch Name": {
+      "main": [
+        [
+          {
+            "node": "05 - Prepare Workspace Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Prepare Workspace Paths": {
+      "main": [
+        [
+          {
+            "node": "05C - Reset Execution Workspace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Clone Repository": {
+      "main": [
+        [
+          {
+            "node": "07 - Create Git Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Create Git Branch": {
+      "main": [
+        [
+          {
+            "node": "07B - Git Config User Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Write Generated Files": {
+      "main": [
+        [
+          {
+            "node": "09 - Git Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 - Git Status": {
+      "main": [
+        [
+          {
+            "node": "10 - Git Add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Git Add": {
+      "main": [
+        [
+          {
+            "node": "11 - Git Commit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - Git Commit": {
+      "main": [
+        [
+          {
+            "node": "12 - Git Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 - Git Push": {
+      "main": [
+        [
+          {
+            "node": "13 - Restore Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 - Prepare WF06 Payload": {
+      "main": [
+        [
+          {
+            "node": "15 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Restore Context": {
+      "main": [
+        [
+          {
+            "node": "14 - Prepare WF06 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03B - Prepare WF08 Escalation": {
+      "main": [
+        [
+          {
+            "node": "15 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "15B - Restore WF05 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05B - Ensure Workspace Exists": {
+      "main": [
+        []
+      ]
+    },
+    "15B - Restore WF05 Payload": {
+      "main": [
+        [
+          {
+            "node": "16 - Return WF05 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07B - Git Config User Name": {
+      "main": [
+        [
+          {
+            "node": "07C - Git Config User Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07C - Git Config User Email": {
+      "main": [
+        [
+          {
+            "node": "08 - Write Generated Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05C - Reset Execution Workspace": {
+      "main": [
+        [
+          {
+            "node": "06 - Clone Repository",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4013d6f0-67fe-4580-8b1b-f1d8210968dc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "8EHv3VHZxhNzU9je",
+  "tags": []
+}

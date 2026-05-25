@@ -1,0 +1,605 @@
+{
+  "name": "WF08 - Human Escalation & Governance",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3e80fdb5-48a4-4338-a078-8ace06b6133c",
+      "name": "00 - Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "037359a8-642b-4d7e-932e-90c8ff6e356c",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "4c1bed1f-3d0d-43cc-a8ae-19187d27f1ce",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "b2dc2c3d-f120-49e8-88e1-5649a399a37c",
+              "name": "current_workflow",
+              "value": "={{ $json.current_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "713e3216-4c6f-45a7-9c44-1ae88b2575dc",
+              "name": "next_workflow",
+              "value": "={{ $json.next_workflow }}",
+              "type": "string"
+            },
+            {
+              "id": "3afbee07-ce4e-426c-8b04-a664abf78f09",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6299a67b-b77b-4799-9141-bee348d541f7",
+              "name": "quality_gate",
+              "value": "={{ $json.quality_gate }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "48781dba-67f6-4b6a-a9b3-6ccbb46ebe88",
+      "name": "01 - Extract Escalation Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst missing = [];\n\nif (!input.execution_id) {\n  missing.push(\"execution_id\");\n}\n\nif (!input.current_workflow) {\n  missing.push(\"current_workflow\");\n}\n\nif (!input.status) {\n  missing.push(\"status\");\n}\n\nif (!input.quality_gate) {\n  missing.push(\"quality_gate\");\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      escalation_validation: {\n        passed: missing.length === 0,\n        missing_fields: missing\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ad2f288a-e68e-4040-b088-e12824f14d9e",
+      "name": "02 - Validate Escalation Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ffeedd79-1737-4af0-94aa-50a8370a63f7",
+              "leftValue": "={{ $json.escalation_validation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "fc6f8c9a-793a-46f2-998a-708963494279",
+      "name": "03 - IF Escalation Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst summary = {\n\n  execution_id:\n    input.execution_id,\n\n  failed_workflow:\n    input.current_workflow,\n\n  workflow_target:\n    input.next_workflow,\n\n  status:\n    input.status,\n\n  blocking_issues:\n    input.quality_gate.blocking_issues || [],\n\n  recommendation:\n    input.quality_gate.recommendation || \"UNKNOWN\"\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      escalation_summary: summary\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "4b14e49e-098c-46f6-8ae3-e580d92a9711",
+      "name": "04 - Generate Failure Summary"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this software factory execution failure.\n\nFailure Summary:\n{{ JSON.stringify($json.escalation_summary) }}\n\nReturn:\n\n{\n  \"root_cause_analysis\": {\n    \"failure_type\": \"\",\n    \"severity\": \"\",\n    \"probable_root_cause\": \"\",\n    \"recommended_fix\": \"\",\n    \"retry_recommended\": true\n  }\n}\n\n\nReturn ONLY valid JSON.\nNo markdown.\nNo explanations.\nNo comments.\nOutput must be parseable by JSON.parse().",
+        "options": {
+          "systemMessage": "You are an industrial software governance auditor.\n\nYour role is to analyze software factory failures.\n\nYou must:\n- identify probable root causes\n- estimate severity\n- classify the failure type\n- propose remediation guidance\n\nReturn ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "72b46ccf-c13e-44a6-8906-386e170c86f5",
+      "name": "05 - AI Root Cause Analysis"
+    },
+    {
+      "parameters": {
+        "model": "hermes3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        32
+      ],
+      "id": "25479cc6-2e29-413e-b486-e598721a6ea4",
+      "name": "Ollama Chat Model (Hermes)",
+      "credentials": {
+        "ollamaApi": {
+          "id": "p0mzco8CfGCSmy9I",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet raw =\n  input.output ||\n  input.text ||\n  input.response ||\n  input.content;\n\nif (!raw) {\n  throw new Error(\n    \"No root cause analysis output found\"\n  );\n}\n\nif (typeof raw !== \"string\") {\n  raw = JSON.stringify(raw);\n}\n\nraw = raw.trim();\n\nconst firstBrace =\n  raw.indexOf(\"{\");\n\nconst lastBrace =\n  raw.lastIndexOf(\"}\");\n\nif (\n  firstBrace === -1 ||\n  lastBrace === -1\n) {\n  throw new Error(\n    \"No valid JSON found\"\n  );\n}\n\nconst parsed =\n  JSON.parse(\n    raw.slice(firstBrace, lastBrace + 1)\n  );\n\nconst analysis =\n  parsed.root_cause_analysis;\n\nconst plan = {\n\n  failed_workflow:\n    input.current_workflow,\n\n  severity:\n    analysis.severity,\n\n  probable_root_cause:\n    analysis.probable_root_cause,\n\n  recommended_fix:\n    analysis.recommended_fix,\n\n  retry_recommended:\n    analysis.retry_recommended\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      root_cause_analysis: analysis,\n      human_action_plan: plan\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -96
+      ],
+      "id": "11f23eea-70f6-4979-89e9-943d10880c5a",
+      "name": "06 - Generate Human Action Plan"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst retry =\n  input.root_cause_analysis\n    .retry_recommended;\n\nconst retryStrategy = {\n\n  retry_allowed:\n    retry,\n\n  retry_workflow:\n    retry\n      ? input.current_workflow\n      : null,\n\n  retry_mode:\n    retry\n      ? \"HUMAN_APPROVED_RETRY\"\n      : \"NO_RETRY\"\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      retry_strategy: retryStrategy\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -96
+      ],
+      "id": "79f3e26e-789e-4d06-893a-a71126aa2b9f",
+      "name": "07 - Generate Retry Strategy"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "i7j2JCkqQbmtzOTI",
+          "mode": "list",
+          "cachedResultName": "factory_execution_state",
+          "cachedResultUrl": "/projects/OqwqoFSf0XRPVIMT/datatables/i7j2JCkqQbmtzOTI"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "keyValue": "={{ $json.execution_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "current_workflow": "={{ $json.current_workflow }}",
+            "next_workflow": "={{ $json.next_workflow }}",
+            "status": "={{ $json.status }}",
+            "execution_payload": "={{ JSON.stringify($json.payload) }}",
+            "next_workflow_payload": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "work_item_id",
+              "displayName": "work_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "current_workflow",
+              "displayName": "current_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_workflow",
+              "displayName": "next_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "retry_count",
+              "displayName": "retry_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "execution_payload",
+              "displayName": "execution_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_workflow_payload",
+              "displayName": "next_workflow_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        144
+      ],
+      "id": "2d9b76a7-f94d-4872-a40c-17572da2588a",
+      "name": "09 - Update Execution State"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8410a675-8848-4d60-8ca4-41ef28e3a1df",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8d7d0d75-7a2e-4a45-ac29-cf5066c28875",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            },
+            {
+              "id": "53c4caaf-0c86-4a7b-96f1-65a29906f42d",
+              "name": "current_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "f557413a-a1e0-482c-b78b-4e0c0510d1a1",
+              "name": "next_workflow",
+              "value": "={{ null }}",
+              "type": "object"
+            },
+            {
+              "id": "1c4fecee-1e86-4483-b2d5-b8ce2c5fb643",
+              "name": "status",
+              "value": "ESCALATED",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2224,
+        144
+      ],
+      "id": "e63dd787-042d-4d81-97c7-d94b1a42648b",
+      "name": "10 - Return Governance Result"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a4bfb967-2050-4db9-be4f-abfb3acb0f76",
+              "name": "execution_id",
+              "value": "={{ $json.execution_id || 'UNKNOWN' }}",
+              "type": "string"
+            },
+            {
+              "id": "71c2d4c0-f3ae-4096-93b6-60e0786c0279",
+              "name": "payload",
+              "value": "={{ $json.payload || {} }}",
+              "type": "object"
+            },
+            {
+              "id": "82da8baa-a1d0-4507-a680-8a39716a3638",
+              "name": "current_workflow",
+              "value": "WF08",
+              "type": "string"
+            },
+            {
+              "id": "280a2d30-a6eb-4f2a-8512-3b02d18e5572",
+              "name": "next_workflow",
+              "value": "={{ null }}",
+              "type": "object"
+            },
+            {
+              "id": "c548e9ce-61e5-4a67-9760-269cfcf1c87c",
+              "name": "status",
+              "value": "HARD_FAILURE",
+              "type": "string"
+            },
+            {
+              "id": "a3dd7f72-8fb6-401c-b9cf-8f7c39cb00ce",
+              "name": "quality_gate",
+              "value": "={\n  \"passed\": false,\n  \"blocking_issues\": [\n    \"Reporting payload invalid\"\n  ],\n  \"recommendation\": \"HUMAN_REVIEW\"\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        144
+      ],
+      "id": "9ba0f544-1ceb-4038-a1c7-a7a823b4640f",
+      "name": "03B - Hard Failure"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst payload =\n  input.payload || {};\n\nconst updatedPayload = {\n\n  ...payload,\n\n  governance: {\n\n    escalation_workflow:\n      input.current_workflow,\n\n    escalation_status:\n      \"ESCALATED\",\n\n    root_cause_analysis:\n      input.root_cause_analysis,\n\n    human_action_plan:\n      input.human_action_plan,\n\n    retry_strategy:\n      input.retry_strategy\n  }\n};\n\nreturn [\n  {\n    json: {\n\n      execution_id:\n        input.execution_id,\n\n      payload:\n        updatedPayload,\n\n      current_workflow:\n        \"WF08\",\n\n      next_workflow:\n        null,\n\n      status:\n        \"ESCALATED\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -96
+      ],
+      "id": "9019e5d2-94c4-4254-9036-62a8832cdad1",
+      "name": "08 - Prepare Governance Payload"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "00 - Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "01 - Extract Escalation Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 - Extract Escalation Payload": {
+      "main": [
+        [
+          {
+            "node": "02 - Validate Escalation Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Validate Escalation Context": {
+      "main": [
+        [
+          {
+            "node": "03 - IF Escalation Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - IF Escalation Valid?": {
+      "main": [
+        [
+          {
+            "node": "04 - Generate Failure Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "03B - Hard Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Generate Failure Summary": {
+      "main": [
+        [
+          {
+            "node": "05 - AI Root Cause Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model (Hermes)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "05 - AI Root Cause Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - AI Root Cause Analysis": {
+      "main": [
+        [
+          {
+            "node": "06 - Generate Human Action Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Generate Human Action Plan": {
+      "main": [
+        [
+          {
+            "node": "07 - Generate Retry Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Generate Retry Strategy": {
+      "main": [
+        [
+          {
+            "node": "08 - Prepare Governance Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 - Update Execution State": {
+      "main": [
+        [
+          {
+            "node": "10 - Return Governance Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03B - Hard Failure": {
+      "main": [
+        [
+          {
+            "node": "09 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Prepare Governance Payload": {
+      "main": [
+        [
+          {
+            "node": "09 - Update Execution State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a1c7e8e0-a963-4914-8890-45a9859b5e6e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a324427967101c0cf98084651f92c771dbd4ff565d19d67925a4520985aaffb2"
+  },
+  "id": "hPuibNWDk03DbddV",
+  "tags": []
+}
