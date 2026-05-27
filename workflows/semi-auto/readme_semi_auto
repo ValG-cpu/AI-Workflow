@@ -1,0 +1,41 @@
+## System 2 - Centralized Semi-Automatic Workflow
+
+### Purpose
+
+This system demonstrates a centralized semi-automatic AI workflow for the AI-Workflow-Nutrition project.
+The workflow automates the full software lifecycle — from Design Thinking to code generation — using a single n8n pipeline powered by Ollama llama3 running locally.
+At 3 key moments, the workflow pauses and waits for human validation before continuing.
+This approach combines AI automation with human control to prevent error propagation and validate critical decisions.
+<br>
+
+### Workflow
+
+| File                           | Description                              |
+| ------------------------------ | ---------------------------------------- |
+| workflows/semi-auto-final.json | Main centralized semi-automatic workflow |
+
+<br>
+### Pipeline Steps
+| Step | Description |
+| --- | --- |
+| 1 - Design Thinking | Generates user stories, personas and problem statement |
+| 2 - Architecture | Generates global technical architecture |
+| 3 - Production | Generates production specs with BLV API integration |
+| 4 - Test & Improvement | Generates TDD test suites and quality gates |
+| 5 - Security | Generates security analysis with vulnerability assessment |
+| 6 - Deployment & Maintenance | Generates Docker and Azure DevOps CI/CD pipeline |
+| 7 - Final Package | Consolidates all outputs into a full lifecycle report |
+| 8 - Code Generation | Generates app.py Flask application connected to Swiss BLV API |
+<br>
+### Human Checkpoints
+| Checkpoint | Trigger | Risk prevented |
+| --- | --- | --- |
+| Checkpoint 1 - Design Thinking | After step 1 | Wrong user story — wrong business understanding |
+| Checkpoint 2 - Production | After step 3 | Invented BLV endpoint — hallucinated nutritional values |
+| Checkpoint 3 - Go/No-Go Final | After step 6 | Unfixed vulnerability — incorrect deployment pipeline |
+Each checkpoint has a 24-hour timeout. If not validated, the workflow stops automatically.
+<br>
+### Execution Steps
+1. Start n8n with Docker
+```bash
+docker compose up -d
