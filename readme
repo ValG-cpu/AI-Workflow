@@ -96,15 +96,61 @@ Ollama local endpoint, if a local model is used
 
 <br>
 
-System 1 - Team Member Section
+## System 1 - Centralized AI Nutrition Workflow
+
 Purpose:
-To be completed.
+This system demonstrates a centralized AI workflow designed to generate and validate a nutrition analysis application.
+The workflow uses n8n as the main orchestrator and Ollama as a local LLM runtime.
+
+The goal of this system is to build an application where a user can enter a meal composed of several foods and quantities.
+The workflow then helps generate an application able to normalize the input, match each food with the closest item from the official Swiss food composition database, retrieve real nutritional values through the BLV API, calculate totals and return a structured result.
+
+The main objective is not only to generate code, but also to validate, correct and test the generated application through a complete lifecycle.
+
+<br>
+
 Workflows:
-To be completed.
-Execution steps:
-To be completed.
-Credentials:
-To be completed.
+The main workflow for System 1 is:
+
+- central-workflow-nutrition
+
+The workflow is organized as a centralized pipeline with several phases:
+
+1. Design Thinking
+Creates the global vision of the project and defines the expected user experience.
+
+2. User Story and Requirement Processing
+Transforms the project idea into functional requirements and user stories.
+
+3. Architecture and Code Generation
+Generates the application structure, frontend, backend and configuration files.
+
+4. Nutrition Logic
+Implements the nutrition analysis logic based on the official BLV API.
+The system must use real food composition data and must not invent nutritional values.
+
+5. Quality Validation
+Checks that the generated application is coherent, complete and aligned with the expected requirements.
+
+6. Automatic Correction Loop
+If issues are detected, the workflow sends them back into a correction step.
+The number of correction attempts is limited to avoid infinite loops.
+
+7. Runtime HTTP Test
+Once the generated application is started locally, the workflow can test it through an HTTP request.
+This verifies that the application is not only generated, but also executable.
+
+8. Final Reporting
+Generates a final lifecycle report with the execution result, warnings, failures, generated files and next actions.
+
+<br>
+
+Generated artifacts:
+- ready-to-run application zip
+- generated source files
+- corrected application files
+- runtime quality test result
+- final lifecycle report
 
 <br>
 
