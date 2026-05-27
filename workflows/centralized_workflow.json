@@ -1,0 +1,2219 @@
+{
+  "name": "centralized_workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "5542ce45-fe1e-48e9-a264-a1725260f700",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        15296,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "project_name",
+              "name": "project_name",
+              "value": "AI-Workflow-Nutrition",
+              "type": "string"
+            },
+            {
+              "id": "ollama_url",
+              "name": "ollama_url",
+              "value": "http://host.docker.internal:11434/api/generate",
+              "type": "string"
+            },
+            {
+              "id": "ollama_model",
+              "name": "ollama_model",
+              "value": "llama3:latest",
+              "type": "string"
+            },
+            {
+              "id": "blv_api_base_url",
+              "name": "blv_api_base_url",
+              "value": "https://api.webapp.prod.blv.foodcase-services.com/BLV_WebApp_WS/webresources/BLV-api",
+              "type": "string"
+            },
+            {
+              "id": "blv_search_path",
+              "name": "blv_search_path",
+              "value": "foods",
+              "type": "string"
+            },
+            {
+              "id": "blv_detail_path",
+              "name": "blv_detail_path",
+              "value": "food/:id",
+              "type": "string"
+            },
+            {
+              "id": "max_fix_attempts",
+              "name": "max_fix_attempts",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "policy",
+              "name": "policy",
+              "value": "Ollama only parses/reasons. Nutrition values must come only from official BLV API. Never add manual nutrient values.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fee92168-5f12-4d41-9196-115c77869a38",
+      "name": "Set Global Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        15552,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "={ `AI-Workflow-Nutrition v8. Return strict JSON only.\n\nLIFECYCLE STEP: Design Thinking.\nTasks:\n1. Create a clear global product vision for a nutrition analysis app.\n2. Generate realistic Azure DevOps-style user stories.\n3. For each user story include: id, title, role, need, value, acceptance_criteria, priority, dependencies, technical_notes.\n4. Prepare an azure_payload array that could be sent to Azure DevOps work items.\n\nHard rules:\n- Ollama must never generate nutrition values.\n- Nutrition values must come only from official BLV API.\n- Do not invent BLV endpoints.\n\nReturn shape:\n{\"vision\":{\"problem\":\"\",\"target_users\":[],\"goals\":[],\"success_metrics\":[]},\"user_stories\":[{\"id\":\"US-01\",\"title\":\"\",\"role\":\"\",\"need\":\"\",\"value\":\"\",\"priority\":\"high|medium|low\",\"acceptance_criteria\":[],\"dependencies\":[],\"technical_notes\":[]}],\"azure_payload\":[{\"op\":\"add\",\"path\":\"/fields/System.Title\",\"value\":\"\"}]}\n` }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb1586d9-f752-4fb8-af85-6ebf0822ccf6",
+      "name": "Set Design Thinking Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16176,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "e9233e8a-3b23-4f26-bd8e-7adef9b6a59a",
+      "name": "Call Ollama Design Thinking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        16448,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nlet raw=txt($json); let p=parse(raw); if(p && typeof p.response==='string') p=parse(p.response);\nreturn [{json:{...$json,design:p}}];\n"
+      },
+      "id": "583bc040-0585-4c28-9dbf-c51430b25a27",
+      "name": "Parse Design Thinking JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16736,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "={ `AI-Workflow-Nutrition v8. Return strict JSON only.\n\nLIFECYCLE STEP: Production / Global architecture.\nUse the previous Design Thinking output and user stories available in the JSON context.\n\nTasks:\n1. Build a global architecture from all user stories.\n2. Define modules: input parser, quantity normalizer, BLV search, BLV detail, candidate review, nutrition calculator, API server, UI, testing, security, deployment, maintenance.\n3. Map each user story to process/frontend/backend/test/security tasks.\n4. Keep the architecture compatible with local n8n + local Ollama + Node/Express app.\n\nHard rules:\n- Ollama is only for parsing/reasoning.\n- All nutrition data must come from official BLV API.\n- Do not invent endpoints.\n\nReturn shape:\n{\"architecture\":{\"overview\":\"\",\"modules\":[],\"data_flow\":[],\"constraints\":[]},\"user_story_task_map\":[{\"story_id\":\"US-01\",\"process\":[],\"frontend\":[],\"backend\":[],\"tests\":[],\"security\":[]}]}\n` }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9eb863c0-db4f-466f-851b-9a57f2c6bf82",
+      "name": "Set Architecture Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        17280,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "fc769461-5ac7-4349-a4ea-dd29e957a86c",
+      "name": "Call Ollama Architecture",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        17568,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nlet raw=txt($json); let p=parse(raw); if(p && typeof p.response==='string') p=parse(p.response);\nreturn [{json:{...$json,architecture:p}}];\n"
+      },
+      "id": "2050a826-9e84-4a57-9cee-86b789781b9b",
+      "name": "Parse Architecture JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17792,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "={ `AI-Workflow-Nutrition v8. Return strict JSON only.\n\nLIFECYCLE STEP: Production by user story.\nUse the previous user stories and architecture from JSON context.\n\nFor each user story:\n1. Retrieve the user story intent.\n2. Generate process logic.\n3. Generate frontend requirements.\n4. Generate backend requirements.\n5. Generate test requirements.\n6. Explain which files should be created/modified.\n\nAlso produce one merged implementation plan for the generated app source.\n\nHard rules:\n- Do not manually create nutrition values.\n- Nutrients must be computed only from official BLV response values.\n- Preserve BLV cache, human review mode, generated .env, pretty UI, and retry guard.\n\nReturn shape:\n{\"production_by_user_story\":[{\"story_id\":\"US-01\",\"process\":{},\"frontend\":{},\"backend\":{},\"tests\":{},\"files\":[]}],\"merged_app_plan\":{\"files\":[],\"runtime_flow\":[],\"quality_gates\":[]}}\n` }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "13e7c31b-571c-49ab-9946-7486b7c5ce36",
+      "name": "Set Production Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        15200,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "7ed16d1e-07a7-4162-996b-e23505698432",
+      "name": "Call Ollama Production",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        15456,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nlet raw=txt($json); let p=parse(raw); if(p && typeof p.response==='string') p=parse(p.response);\nreturn [{json:{...$json,production:p}}];\n"
+      },
+      "id": "69a43d13-6080-4bc8-9b84-8d7cf4014bd6",
+      "name": "Parse Production JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15744,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function sourceFromNode(name) {\n  try {\n    const items = $items(name);\n    if (Array.isArray(items)) {\n      for (let i = items.length - 1; i >= 0; i--) {\n        const src = items[i]?.json?.generated_app_source;\n        if (src && typeof src === 'object' && Object.keys(src).length >= 8) return src;\n      }\n    }\n  } catch (error) {}\n  return null;\n}\n\nfunction getFiles() {\n  const direct = $json.generated_app_source;\n  if (direct && typeof direct === 'object' && Object.keys(direct).length >= 8) {\n    return { source: 'current_json', files: direct };\n  }\n\n  const ordered = ['Apply Safe Runtime Patch', 'Merge Ollama Generated App Source'];\n  for (const name of ordered) {\n    const src = sourceFromNode(name);\n    if (src) return { source: name, files: src };\n  }\n\n  return { source: 'missing_generated_app_source', files: {} };\n}\n\nconst recovered = getFiles();\nconst files = recovered.files || {};\nif (!files['app/.env'] && files['app/.env.example']) files['app/.env'] = files['app/.env.example'];\nconst failures = [];\nconst warnings = [];\nconst f = (p) => String(files[p] || '');\nconst has = (p, s) => f(p).includes(s);\n\nif (recovered.source === 'missing_generated_app_source') {\n  failures.push('generated_app_source_missing_before_static_quality_test');\n}\n\nif (!has('app/.env.example', 'BLV_SEARCH_PATH=foods')) failures.push('BLV_SEARCH_PATH must be foods');\nif (!has('app/.env.example', 'BLV_DETAIL_PATH=food/:id')) failures.push('BLV_DETAIL_PATH must be food/:id');\nif (!has('app/.env.example', 'BLV_CACHE_ENABLED=true')) failures.push('BLV cache must be enabled in .env.example');\n\nif (!has('app/.env', 'BLV_API_BASE_URL=')) failures.push('Runtime .env must be generated in app/.env');\nif (!has('app/.env', 'BLV_SEARCH_PATH=foods')) failures.push('Runtime .env BLV_SEARCH_PATH must be foods');\nif (!has('app/.env', 'BLV_DETAIL_PATH=food/:id')) failures.push('Runtime .env BLV_DETAIL_PATH must be food/:id');\nif (!has('app/src/services/BLVClient.ts', \"set(\\\"search\\\"\") && !has('app/src/services/BLVClient.ts', \"set('search'\")) failures.push('BLVClient must use search query parameter');\nif (!has('app/src/services/BLVClient.ts', 'searchCache') || !has('app/src/services/BLVClient.ts', 'detailCache')) failures.push('BLVClient must include search/detail cache');\nif (!has('app/src/services/CandidateReviewer.ts', 'reviewRequired')) failures.push('CandidateReviewer must support human review decisions');\nfor (const code of ['ENERCC','PROT625','FAT','CHO']) if (!has('app/src/services/NutritionCalculator.ts', code)) failures.push('NutritionCalculator missing BLV code '+code);\nif (!has('app/src/NutritionAnalysisApp.ts', 'searchFood(food)')) failures.push('App must call BLV searchFood');\nif (!has('app/src/NutritionAnalysisApp.ts', 'getNutrients')) failures.push('App must call BLV getNutrients');\nif (!has('app/src/NutritionAnalysisApp.ts', 'calculator.calculate(enrichedFoods)')) failures.push('App must calculate from enriched BLV foods');\nif (!has('app/src/NutritionAnalysisApp.ts', 'Human review required')) failures.push('App must return human-review warnings for ambiguous foods');\nif (f('app/src/NutritionAnalysisApp.ts').includes(\"source:'BLV'\") || f('app/src/NutritionAnalysisApp.ts').includes('source: \"BLV\"')) failures.push('Provenance source must be official BLV API only');\n\nconst status = failures.length ? 'fail' : 'pass';\nconst hist = Array.isArray($json.runtime_quality_history) ? [...$json.runtime_quality_history] : [];\nhist.push({\n  attempt: Number($json.fix_attempt || 0),\n  phase: 'static_source_quality',\n  status,\n  source_used: recovered.source,\n  file_count_checked: Object.keys(files).length,\n  failures,\n  warnings,\n  timestamp: new Date().toISOString()\n});\n\nreturn [{\n  json: {\n    ...$json,\n    generated_app_source: files,\n    app_source_origin_runtime_quality: recovered.source,\n    max_fix_attempts: Number($json.max_fix_attempts || 10),\n    runtime_quality_status: status,\n    runtime_quality_failures: [...new Set(failures)],\n    runtime_quality_warnings: [...new Set(warnings)],\n    runtime_quality_history: hist\n  }\n}];"
+      },
+      "id": "20e5ebca-309b-4acf-8a7f-b7a3ef00cc07",
+      "name": "Runtime Quality Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15200,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c",
+              "leftValue": "={{$json.runtime_quality_status}}",
+              "rightValue": "pass",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6492d05d-b417-45a0-aa1d-dd1073addc7e",
+      "name": "IF Runtime Quality Passed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        16928,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c",
+              "leftValue": "={{$json.can_retry_fix === true}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7d405c9f-9d7e-4e35-9f2e-93cb49a2c355",
+      "name": "IF Can Retry Fix",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        18368,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "type": "string",
+              "value": "={{ `You are the AI-Workflow-Nutrition CODE FIX AGENT.\n\nThe app source was generated by Ollama and failed validation. n8n is only the centralized orchestrator; you must generate the corrected file contents.\n\nCurrent global fix attempt: ${$json.fix_attempt}. Max attempts: ${$json.max_fix_attempts}.\n\nHARD RULES:\n- Return strict JSON only. No markdown.\n- NEVER add fixed nutrition values.\n- NEVER invent calories, proteins, fat, carbohydrates or micronutrients.\n- Nutrition totals must be derived only from official_nutrients returned by BLV.\n- Preserve official BLV API only policy.\n- Preserve cache and human review behavior.\n- If files are missing, generate the missing files.\n- If a file is broken, return its full corrected content.\n\nExisting files:\n${JSON.stringify(Object.keys($json.generated_app_source || {}), null, 2)}\n\nFailures:\n${JSON.stringify($json.runtime_quality_failures || [], null, 2)}\n\nWarnings:\n${JSON.stringify($json.runtime_quality_warnings || [], null, 2)}\n\nHTTP app result if available:\n${JSON.stringify($json.runtime_http_result || {}, null, 2)}\n\nReturn shape:\n{\n  \"status\": \"fix_files\",\n  \"diagnosis\": [\"string\"],\n  \"files_to_replace\": [\n    {\"path\": \"app/src/example.ts\", \"content\": \"full corrected file content\"}\n  ],\n  \"tests_to_rerun\": [\"static_source_quality\", \"running_app_http_validation\"],\n  \"safety_checks\": [\"no manual nutrition values\", \"official BLV only\"]\n}\n` }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "03912ddf-5c9b-4cea-b643-34785422aa83",
+      "name": "Set Runtime Fix Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        18704,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "7a55a553-6541-4678-9ebd-88b89329c47f",
+      "name": "Call Ollama Runtime Fix Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        19264,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nfunction lastJson(nodeName) {\n  try {\n    const items = $items(nodeName);\n    if (Array.isArray(items) && items.length) return items[items.length - 1].json || {};\n  } catch (error) {}\n  return {};\n}\n\nconst base = lastJson('Hard Collapse Before Fix Agent');\nlet raw=txt($json);\nlet p=parse(raw);\nif(p && typeof p.response==='string') p=parse(p.response);\n\nreturn [{json:{...base,...$json,runtime_fix_plan:p}}];"
+      },
+      "id": "42338e78-d8e0-4d9d-a4e5-e505842af308",
+      "name": "Parse Runtime Fix Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        19552,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function sourceFromNode(name) {\n  try {\n    const items = $items(name);\n    if (Array.isArray(items)) {\n      for (let i = items.length - 1; i >= 0; i--) {\n        const src = items[i]?.json?.generated_app_source;\n        if (src && typeof src === 'object' && Object.keys(src).length >= 1) return src;\n      }\n    }\n  } catch (error) {}\n  return null;\n}\nfunction normalizePatchFiles(plan) {\n  if (!plan) return {};\n  if (Array.isArray(plan.files_to_replace)) {\n    const out = {};\n    for (const f of plan.files_to_replace) if (f && f.path && typeof f.content === 'string') out[String(f.path)] = f.content;\n    return out;\n  }\n  if (Array.isArray(plan.files)) {\n    const out = {};\n    for (const f of plan.files) if (f && f.path && typeof f.content === 'string') out[String(f.path)] = f.content;\n    return out;\n  }\n  if (plan.generated_app_source && typeof plan.generated_app_source === 'object') {\n    const out = {};\n    for (const [path, content] of Object.entries(plan.generated_app_source)) if (String(path).startsWith('app/') && typeof content === 'string') out[path] = content;\n    return out;\n  }\n  return {};\n}\nlet baseFiles = $json.generated_app_source;\nif (!baseFiles || typeof baseFiles !== 'object' || Object.keys(baseFiles).length < 1) {\n  baseFiles = sourceFromNode('Hard Collapse Before Fix Agent') || sourceFromNode('Merge Ollama Generated App Source') || {};\n}\nconst files = { ...(baseFiles || {}) };\nconst patchFiles = normalizePatchFiles($json.runtime_fix_plan);\nfor (const [path, content] of Object.entries(patchFiles)) {\n  if (String(path).startsWith('app/') && typeof content === 'string') files[path] = content;\n}\nreturn [{\n  json: {\n    ...$json,\n    generated_app_source: files,\n    fix_attempt: Number($json.next_fix_attempt ?? (Number($json.fix_attempt || 0) + 1)),\n    max_fix_attempts: Number($json.max_fix_attempts || 10),\n    app_source_generated_by: 'ollama',\n    last_patch: { generated_by: 'ollama_fix_agent', replaced_files: Object.keys(patchFiles), recovered_source_file_count: Object.keys(files).length }\n  }\n}];"
+      },
+      "id": "b742ece4-e3ef-4a6a-8656-31ab9d20ab44",
+      "name": "Apply Safe Runtime Patch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        19824,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nif (!data.runtimeQualityLoop || data.runtimeQualityLoop.execution_id !== $execution.id) {\n  data.runtimeQualityLoop = { execution_id: $execution.id, started_at: new Date().toISOString() };\n}\n\nconst report = {\n  status: 'human_review_required',\n  reason: $json.guard_reason || 'Max correction attempts reached or retry disabled',\n  attempts_used: Number($json.fix_attempts_used_global ?? $json.fix_attempt ?? 0),\n  max_fix_attempts: Number($json.max_fix_attempts || 10),\n  failures: $json.runtime_quality_failures || [],\n  warnings: $json.runtime_quality_warnings || [],\n  runtime_quality_history: $json.runtime_quality_history || [],\n  runtime_http_history: $json.runtime_http_history || [],\n  next_action: 'Auto-correction stopped; workflow continues to the next lifecycle steps with this report.'\n};\n\ndata.runtimeQualityLoop.final_status = 'human_review_required';\ndata.runtimeQualityLoop.human_review_required = true;\ndata.runtimeQualityLoop.auto_correction_stopped = true;\ndata.runtimeQualityLoop.human_review_report = report;\ndata.runtimeQualityLoop.fix_attempts_used = report.attempts_used;\ndata.runtimeQualityLoop.max_fix_attempts = report.max_fix_attempts;\ndata.runtimeQualityLoop.last_failures = report.failures;\n\nreturn [{\n  json: {\n    ...$json,\n    runtime_quality_status: $json.runtime_quality_status || 'fail',\n    human_review_required: true,\n    auto_correction_stopped: true,\n    runtime_human_review_report: report\n  },\n  binary: {\n    ...($binary || {}),\n    human_review_report: {\n      data: Buffer.from(JSON.stringify(report, null, 2), 'utf8').toString('base64'),\n      mimeType: 'text/plain',\n      fileName: 'runtime-human-review-required.txt'\n    }\n  }\n}];"
+      },
+      "id": "e3d4f404-081a-4b72-92dd-7586c399162b",
+      "name": "Create Human Review Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        18992,
+        3872
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "={ `AI-Workflow-Nutrition v8. Return strict JSON only.\n\nLIFECYCLE STEP: Test / improvement.\nUse the generated user stories, production plan, runtime quality results, and user_story_conformity_report.\n\nTasks:\n1. Check whether each user story is covered by generated process/frontend/backend/tests.\n2. Identify gaps and propose improvements.\n3. Distinguish blocking issues from warnings.\n4. Do not trigger code correction for environment-only issues such as app unreachable or BLV returning no usable candidate.\n\nHard rules:\n- No invented nutrition values.\n- Official BLV API only.\n\nReturn shape:\n{\"test_status\":\"pass|warning|fail\",\"user_story_checks\":[{\"story_id\":\"US-01\",\"status\":\"pass|warning|fail\",\"gaps\":[],\"improvements\":[]}],\"global_improvements\":[],\"blocking_issues\":[],\"non_blocking_warnings\":[]}\n` }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "42647ed6-253f-4bf1-adb3-6f47257fbbd1",
+      "name": "Set Test Improvement Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        18048,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "ec89cb93-92e9-49f4-9fcd-cb289da9c49f",
+      "name": "Call Ollama Test Improvement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        18272,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nlet raw=txt($json); let p=parse(raw); if(p && typeof p.response==='string') p=parse(p.response);\nreturn [{json:{...$json,testing:p}}];\n"
+      },
+      "id": "064d8d58-78eb-4142-b058-a69d32c2ea6c",
+      "name": "Parse Test Improvement JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        18528,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "={ `AI-Workflow-Nutrition v8. Return strict JSON only.\n\nLIFECYCLE STEP: Security.\nAnalyze the generated project and workflow.\n\nTasks:\n1. Identify security/privacy risks for local n8n, local Ollama, Express app, BLV API calls, logs, .env, user meal data.\n2. Propose mitigations.\n3. Create a security improvement backlog.\n4. Keep local-first architecture and avoid cloud LLM costs.\n\nHard rules:\n- Never suggest storing sensitive meal data unnecessarily.\n- Never suggest exposing Ollama publicly.\n- Never suggest invented nutrition data.\n\nReturn shape:\n{\"security_status\":\"pass|warning|fail\",\"findings\":[{\"severity\":\"low|medium|high\",\"area\":\"\",\"risk\":\"\",\"mitigation\":\"\"}],\"security_backlog\":[],\"ready_for_local_mvp\":true}\n` }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c19db5fc-2e91-4cb5-ad23-75e58aa0d7ea",
+      "name": "Set Security Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        18976,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "b02af609-aa6a-4f33-a372-61e13d52fc74",
+      "name": "Call Ollama Security",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        19152,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nlet raw=txt($json); let p=parse(raw); if(p && typeof p.response==='string') p=parse(p.response);\nreturn [{json:{...$json,security:p}}];\n"
+      },
+      "id": "36b4e1e9-0092-406b-88f8-d30ba4e55d1b",
+      "name": "Parse Security JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        19344,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "={ `AI-Workflow-Nutrition v8. Return strict JSON only.\n\nLIFECYCLE STEP: Mise en route / maintenance.\nUse the generated app, reports, security review, and runtime validation state.\n\nTasks:\n1. Generate local deployment plan for Docker n8n + local Ollama + generated Node app.\n2. Generate startup commands.\n3. Generate troubleshooting steps.\n4. Generate maintenance/self-healing rules: detect issue, classify code issue vs environment issue, retry max 10 only for code issues, otherwise human review.\n5. Do not invent versions.\n\nReturn shape:\n{\"deployment\":{\"steps\":[],\"commands\":[],\"health_checks\":[]},\"maintenance\":{\"self_healing_rules\":[],\"max_auto_fixes\":10,\"human_review_triggers\":[]},\"known_environment_issues\":[],\"ready_to_run\":true}\n` }",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "132ad435-5cca-43bd-8147-4ea0169a10ad",
+      "name": "Set Deployment Maintenance Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        19920,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.1, num_predict: 900 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "4cd74ccd-1bf2-4e3f-95ea-40afffe85aa8",
+      "name": "Call Ollama Deployment Maintenance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        20144,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction txt(i){ if(typeof i.response==='string')return i.response; if(typeof i.data==='string')return i.data; if(typeof i.body==='string')return i.body; return JSON.stringify(i||{}); }\nfunction parse(s){ try{return JSON.parse(s)}catch{} const a=s.indexOf('{'), b=s.lastIndexOf('}'); if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1))}catch{}} return {warning:'malformed JSON',raw:s.slice(0,2000)}; }\nlet raw=txt($json); let p=parse(raw); if(p && typeof p.response==='string') p=parse(p.response);\nreturn [{json:{...$json,deployment:p}}];\n"
+      },
+      "id": "96fd4c0e-0666-4a66-a998-d195b01f0bc7",
+      "name": "Parse Deployment Maintenance JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20336,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function sourceFromNode(name) {\n  try {\n    const items = $items(name);\n    if (Array.isArray(items)) {\n      for (let i = items.length - 1; i >= 0; i--) {\n        const src = items[i]?.json?.generated_app_source;\n        if (src && typeof src === 'object' && Object.keys(src).length >= 1) return src;\n      }\n    }\n  } catch (error) {}\n  return null;\n}\nfunction getAppSource(){\n  const direct = $json.generated_app_source;\n  if (direct && typeof direct === 'object' && Object.keys(direct).length >= 1) return {source:'current_json', files:direct};\n  const ordered = ['Apply Safe Runtime Patch','Runtime Quality Test','Merge Ollama Generated App Source'];\n  for (const name of ordered) {\n    const src = sourceFromNode(name);\n    if (src) return {source:name, files:src};\n  }\n  return {source:'missing_ollama_generated_source', files:{}};\n}\nfunction crcTable(){const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;} const CT=crcTable();\nfunction crc32(b){let c=0^(-1); for(let i=0;i<b.length;i++) c=(c>>>8)^CT[(c^b[i])&255]; return (c^(-1))>>>0;} function u16(n){const b=Buffer.alloc(2);b.writeUInt16LE(n&65535,0);return b} function u32(n){const b=Buffer.alloc(4);b.writeUInt32LE(n>>>0,0);return b}\nfunction zip(files){const loc=[],cen=[];let off=0;const dt=new Date(),time=(dt.getHours()<<11)|(dt.getMinutes()<<5)|Math.floor(dt.getSeconds()/2),date=((dt.getFullYear()-1980)<<9)|((dt.getMonth()+1)<<5)|dt.getDate(); const entries=Object.entries(files).sort(([a],[b])=>a.localeCompare(b)); for(const [p,c] of entries){const nb=Buffer.from(p,'utf8'), cb=Buffer.from(String(c),'utf8'), cr=crc32(cb); const lh=Buffer.concat([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(time),u16(date),u32(cr),u32(cb.length),u32(cb.length),u16(nb.length),u16(0),nb]); loc.push(lh,cb); cen.push(Buffer.concat([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(time),u16(date),u32(cr),u32(cb.length),u32(cb.length),u16(nb.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(off),nb])); off+=lh.length+cb.length;} const l=Buffer.concat(loc), ce=Buffer.concat(cen); return Buffer.concat([l,ce,Buffer.concat([u32(0x06054b50),u16(0),u16(0),u16(entries.length),u16(entries.length),u32(ce.length),u32(l.length),u16(0)])]);}\n\nconst required = ['app/package.json','app/tsconfig.json','app/.env.example','app/.env','app/src/server.ts','app/src/NutritionAnalysisApp.ts','app/src/services/BLVClient.ts','app/src/services/NutritionCalculator.ts','app/src/services/CandidateReviewer.ts','app/src/services/OllamaMealParser.ts','app/src/services/QuantityNormalizer.ts','app/public/index.html','app/README.md'];\nconst appSource = getAppSource();\nconst files = {...appSource.files};\nconst manifestBeforeReports = Object.keys(files).sort();\nconst missing = required.filter(p => !manifestBeforeReports.includes(p));\n\nconst humanReviewRequired = Boolean($json.human_review_required || $json.requires_human_review || $json.runtime_quality_status === 'human_review_required');\nconst finalRuntimeQualityStatus = humanReviewRequired ? 'human_review_required' : ($json.runtime_quality_status || (missing.length ? 'fail' : 'pass'));\nconst finalLifecycleStatus = missing.length ? 'error' : (humanReviewRequired ? 'human_review_required' : 'success');\n\nconst summary = {\n  status: finalLifecycleStatus,\n  runtime_quality_status: finalRuntimeQualityStatus,\n  app_source_origin: appSource.source,\n  app_source_generated_by: $json.app_source_generated_by || 'ollama',\n  generation_metadata: $json.generation_metadata || {},\n  rules: { nutrition_values: 'official BLV API only', manual_values: 'forbidden' },\n  required_files_missing: missing,\n  fix_attempts_used: Number($json.fix_attempts_used_global ?? $json.fix_attempt ?? 0),\n  human_review_required: humanReviewRequired,\n  failures_remaining: $json.runtime_quality_failures || []\n};\n\nfiles['full-lifecycle-summary.json'] = JSON.stringify(summary, null, 2);\nfiles['README-full-lifecycle.md'] = '# AI-Workflow-Nutrition v9\\n\\nThis package was generated by Ollama through the centralized n8n workflow, then validated and packaged by n8n.\\n\\nRun:\\n```bash\\ncd app\\nnpm install\\nnpm run dev\\n```\\n';\nfiles['zip-manifest.json'] = JSON.stringify(Object.keys(files).sort(), null, 2);\n\nconst manifest = Object.keys(files).sort();\nconst z = zip(files);\nconst report = 'AI-Workflow-Nutrition final report v9 — Ollama code generation\\n\\n' + JSON.stringify(summary, null, 2) + '\\n\\nZIP manifest:\\n' + manifest.map(x=>'- '+x).join('\\n') + '\\n';\nreturn [{\n  json: {\n    status: finalLifecycleStatus,\n    runtime_quality_status: finalRuntimeQualityStatus,\n    zip_manifest: manifest,\n    zip_missing_required_files: missing,\n    zip_app_file_count: manifest.filter(p=>p.startsWith('app/')).length,\n    app_source_origin: appSource.source,\n    app_source_generated_by: 'ollama',\n    usage: ['Download app-ready-to-run.zip','Extract it','cd app','npm install','npm run dev'],\n    data: summary\n  },\n  binary: {\n    app_ready_to_run_zip: { data: z.toString('base64'), mimeType:'application/zip', fileName:'app-ready-to-run.zip' },\n    final_lifecycle_report: { data: Buffer.from(report,'utf8').toString('base64'), mimeType:'text/plain', fileName:'report-final-lifecycle-v9.txt' }\n  }\n}];"
+      },
+      "id": "bd5c09e3-e380-44ca-8b44-f2ef225b3857",
+      "name": "Generate Final Package ZIP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20928,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first();\nconst b=item.binary||{};\nif(!b.app_ready_to_run_zip) return [{json:{status:'error',message:'ZIP missing',available:Object.keys(b),zip_content_check_status:item.json.zip_content_check_status},binary:b}];\nconst humanReviewRequired = item.json.status === 'human_review_required' || item.json.runtime_quality_status === 'human_review_required' || item.json.data?.human_review_required === true;\nconst finalStatus = humanReviewRequired ? 'human_review_required' : (item.json.zip_content_check_status==='pass'?'success':'warning');\nreturn [{json:{status:finalStatus,file:'app-ready-to-run.zip',runtime_quality_status:item.json.runtime_quality_status,zip_content_check_status:item.json.zip_content_check_status,zip_app_file_count:item.json.zip_app_file_count,zip_missing_required_files:item.json.zip_content_missing||[],human_review_required:humanReviewRequired,failures_remaining:item.json.data?.failures_remaining||[],usage:item.json.usage},binary:{app_ready_to_run_zip:b.app_ready_to_run_zip,final_lifecycle_report:b.final_lifecycle_report,human_review_report:b.human_review_report,runtime_comparison_report:b.runtime_comparison_report}}];"
+      },
+      "id": "3a9414fe-a214-43b3-b7c4-c94a30bba3d2",
+      "name": "FINAL - Download App ZIP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        21408,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first();\nconst manifest = item.json.zip_manifest || [];\nconst required = [\n  'app/package.json','app/tsconfig.json','app/.env.example','app/.env','app/src/server.ts','app/src/NutritionAnalysisApp.ts',\n  'app/src/services/BLVClient.ts','app/src/services/CandidateReviewer.ts','app/src/services/NutritionCalculator.ts','app/src/services/OllamaMealParser.ts','app/src/services/QuantityNormalizer.ts',\n  'app/public/index.html','app/README.md'\n];\nconst missing = required.filter(p => !manifest.includes(p));\nconst binary = item.binary || {};\nconst zipOk = Boolean(binary.app_ready_to_run_zip && binary.app_ready_to_run_zip.data);\nconst hasCache = manifest.includes('app/src/services/BLVClient.ts');\nconst hasReview = manifest.includes('app/src/services/CandidateReviewer.ts');\nreturn [{\n  json: {\n    ...item.json,\n    zip_content_check_status: missing.length || !zipOk ? 'fail' : 'pass',\n    zip_content_missing: missing,\n    zip_binary_present: zipOk,\n    zip_quality_features: {\n      blv_cache_expected: hasCache,\n      human_review_expected: hasReview,\n      runtime_http_validation: true,\n      before_after_report: true\n    },\n    zip_validation_message: missing.length ? 'ZIP is missing required app source files.' : 'ZIP contains the full app source tree, generated app/.env, and v7.9 quality features and polished UI.'\n  },\n  binary\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        21136,
+        2720
+      ],
+      "id": "bed9cec9-9ded-4faf-9527-3d5eb879b01f",
+      "name": "Validate Final ZIP Contents"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\nconst first = inputItems[0]?.json || {};\n\nconst failures = [];\nconst warnings = [];\nfor (const item of inputItems) {\n  const json = item.json || {};\n  if (Array.isArray(json.runtime_quality_failures)) failures.push(...json.runtime_quality_failures);\n  if (Array.isArray(json.runtime_quality_warnings)) warnings.push(...json.runtime_quality_warnings);\n}\n\nconst required = String(first.runtime_http_test_required ?? 'true').toLowerCase() !== 'false';\nreturn [{\n  json: {\n    ...first,\n    runtime_app_url: first.runtime_app_url || 'http://host.docker.internal:3000/analyze',\n    runtime_health_url: first.runtime_health_url || 'http://host.docker.internal:3000/health',\n    test_meal: first.test_meal || '200g chicken breast, 150g rice, 150g apple',\n    runtime_http_test_required: required,\n    fix_attempt: Number(first.fix_attempt || 0),\n    max_fix_attempts: Number(first.max_fix_attempts || 10),\n    runtime_quality_failures: [...new Set(failures.length ? failures : (first.runtime_quality_failures || []))],\n    runtime_quality_warnings: [...new Set(warnings.length ? warnings : (first.runtime_quality_warnings || []))],\n    collapsed_before_http_count: inputItems.length\n  }\n}];"
+      },
+      "id": "3f34c2a0-0cf5-4433-ae8f-4c8d5c98003f",
+      "name": "Prepare Running App HTTP Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15728,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.runtime_app_url}}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "raw_meal_input",
+              "value": "={{$json.test_meal}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "0a9cfcc0-070f-4561-8651-a03403cc48e6",
+      "name": "Call Running App Analyze",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        16096,
+        2736
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function lastJson(nodeName) {\n  try {\n    const items = $items(nodeName);\n    if (Array.isArray(items) && items.length) return items[items.length - 1].json || {};\n  } catch (error) {}\n  return {};\n}\nfunction isNumber(v) { return typeof v === 'number' && Number.isFinite(v); }\nfunction unique(arr) { return [...new Set(arr)]; }\n\nconst base = lastJson('Collapse Runtime Quality Test Input') || lastJson('Runtime Quality Test');\nconst prep = lastJson('Prepare Running App HTTP Test');\nconst http = $json || {};\nconst failures = [...(base.runtime_quality_failures || [])];\nconst warnings = [...(base.runtime_quality_warnings || [])];\nlet appResult = http;\nlet httpStatus = 'executed';\n\nif (http.error || http.message?.includes?.('ECONNREFUSED') || http.code === 'ECONNREFUSED') {\n  httpStatus = 'unreachable';\n  const msg = 'Running app HTTP test failed. Start the generated app with `cd app && npm run dev`, then rerun the workflow.';\n  if (prep.runtime_http_test_required) failures.push('runtime_http_app_unreachable');\n  else warnings.push(msg);\n  appResult = { error: http.error || http.message || 'HTTP runtime test failed' };\n}\n\nif (httpStatus === 'executed') {\n  const foods = Array.isArray(appResult.foods) ? appResult.foods : [];\n  const totals = appResult.totals || {};\n  const resultWarnings = Array.isArray(appResult.warnings) ? appResult.warnings.map(String) : [];\n  const hasOfficialNutrients = foods.some(food => Array.isArray(food.official_nutrients));\n  const hasReviewOrDataWarning = foods.some(food => food?.provenance?.review_required === true) || resultWarnings.some(w => /human review|required|no official nutrients|no blv match|blv error/i.test(w));\n\n  if (!foods.length) failures.push('runtime_http_foods_empty');\n\n  for (const food of foods) {\n    const name = food.inputName || food.input_name || 'unknown';\n    const q = food.normalizedQuantityG ?? food.normalized_quantity_g;\n    if (!isNumber(q)) failures.push(`runtime_http_quantity_not_normalized:${name}`);\n    if (food.provenance?.source && food.provenance.source !== 'official BLV API only') failures.push(`runtime_http_bad_provenance:${name}`);\n  }\n\n  for (const key of ['calories','proteins','fat','carbohydrates']) {\n    if (!isNumber(totals[key])) {\n      if (hasOfficialNutrients) failures.push(`runtime_http_totals_${key}_not_number`);\n      else warnings.push(`runtime_http_totals_${key}_not_number_because_no_official_nutrients`);\n    }\n  }\n\n  const policy = String(appResult.data_policy || '').toLowerCase();\n  if (!policy.includes('official') || !policy.includes('blv')) failures.push('runtime_http_data_policy_not_official_blv');\n\n  // Do not fail just because the safe policy text says \"no invented nutrition values\".\n  // Only flag suspicious invented/manual values if a warning or error explicitly says values were added manually.\n  const suspiciousText = JSON.stringify({ warnings: appResult.warnings || [], error: appResult.error || '' });\n  if (/added manual nutrition|manually added nutrition|invented calories|invented macros/i.test(suspiciousText)) {\n    failures.push('runtime_http_possible_invented_value_marker');\n  }\n\n  if (!hasOfficialNutrients && hasReviewOrDataWarning) {\n    warnings.push('runtime_http_no_official_nutrients_available_yet_review_or_data_warning_returned');\n  }\n}\n\nconst uniqueFailures = unique(failures);\nconst uniqueWarnings = unique(warnings);\nconst status = uniqueFailures.length ? 'fail' : 'pass';\nconst qualityHistory = Array.isArray(base.runtime_quality_history) ? [...base.runtime_quality_history] : [];\nconst httpHistory = Array.isArray(base.runtime_http_history) ? [...base.runtime_http_history] : [];\nhttpHistory.push({\n  attempt: Number(base.fix_attempt || 0),\n  phase: 'running_app_http_validation',\n  status: httpStatus === 'unreachable' ? 'fail' : status,\n  http_status: httpStatus,\n  failures: uniqueFailures,\n  warnings: uniqueWarnings,\n  test_meal: prep.test_meal,\n  timestamp: new Date().toISOString()\n});\n\nconst comparison = {\n  first_attempt: [...qualityHistory, ...httpHistory][0] || null,\n  latest_attempt: [...qualityHistory, ...httpHistory].at(-1) || null,\n  attempts_used: Number(base.fix_attempt || 0),\n  improved: uniqueFailures.length === 0\n};\n\nreturn [{\n  json: {\n    ...base,\n    runtime_quality_status: status,\n    runtime_quality_failures: uniqueFailures,\n    runtime_quality_warnings: uniqueWarnings,\n    runtime_http_status: httpStatus,\n    runtime_http_result: appResult,\n    max_fix_attempts: Number(base.max_fix_attempts || 10),\n    runtime_http_history: httpHistory,\n    runtime_comparison: comparison\n  }\n}];"
+      },
+      "id": "82d407cf-523e-4ced-8b11-88a900c2c08d",
+      "name": "Validate Running App HTTP Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16368,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst history = [...($json.runtime_quality_history || []), ...($json.runtime_http_history || [])];\nconst report = {\n  status: $json.runtime_quality_status,\n  attempts_used: Number($json.fix_attempt || 0),\n  before: history[0] || null,\n  after: history[history.length - 1] || null,\n  failures_remaining: $json.runtime_quality_failures || [],\n  warnings: $json.runtime_quality_warnings || [],\n  http_status: $json.runtime_http_status || 'not_run',\n  improvements_enabled: $json.quality_improvements || []\n};\nconst text = 'AI-Workflow-Nutrition — Runtime before/after quality report v7.9\\n\\n' + JSON.stringify(report, null, 2);\nreturn [{\n  json: { ...$json, runtime_before_after_report: report },\n  binary: {\n    runtime_comparison_report: {\n      data: Buffer.from(text, 'utf8').toString('base64'),\n      mimeType: 'text/plain',\n      fileName: 'report-runtime-before-after-v7-9.txt'\n    }\n  }\n}];\n"
+      },
+      "id": "179352e5-07b5-4f0f-b10e-e623a696b1d0",
+      "name": "Create Runtime Before After Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17392,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst first = items[0]?.json || {};\nconst failures = [];\nconst warnings = [];\nconst history = [];\nconst attempts = [];\nlet generatedAppSource = first.generated_app_source || null;\n\nfor (const item of items) {\n  const json = item.json || {};\n  if (!generatedAppSource && json.generated_app_source) generatedAppSource = json.generated_app_source;\n  if (Array.isArray(json.runtime_quality_failures)) failures.push(...json.runtime_quality_failures);\n  if (Array.isArray(json.runtime_quality_warnings)) warnings.push(...json.runtime_quality_warnings);\n  if (Array.isArray(json.runtime_quality_history)) history.push(...json.runtime_quality_history);\n  const a = Number(json.fix_attempt ?? 0);\n  if (Number.isFinite(a)) attempts.push(a);\n}\n\nconst uniqueFailures = [...new Set(failures)];\nconst uniqueWarnings = [...new Set(warnings)];\nconst latest = items[items.length - 1]?.json || first;\nconst globalFixAttempt = attempts.length ? Math.max(...attempts) : Number(latest.fix_attempt || first.fix_attempt || 0);\nconst maxFixAttempts = Number(latest.max_fix_attempts || first.max_fix_attempts || 10);\n\nreturn [{\n  json: {\n    ...first,\n    ...latest,\n    generated_app_source: generatedAppSource || latest.generated_app_source || {},\n    runtime_quality_status: uniqueFailures.length ? 'fail' : (latest.runtime_quality_status || 'pass'),\n    runtime_quality_failures: uniqueFailures,\n    runtime_quality_warnings: uniqueWarnings,\n    runtime_quality_history: history.length ? history : (latest.runtime_quality_history || []),\n    fix_attempt: globalFixAttempt,\n    max_fix_attempts: maxFixAttempts,\n    collapsed_runtime_quality_input_count: items.length,\n    hard_single_item: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15472,
+        2736
+      ],
+      "id": "f4de5a3c-7a7e-4426-88e4-bf045f34bb74",
+      "name": "Collapse Runtime Quality Test Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst first = items[0]?.json || {};\nconst latest = items[items.length - 1]?.json || first;\n\nconst failures = [];\nconst warnings = [];\nconst qualityHistory = [];\nconst httpHistory = [];\nconst attempts = [];\nlet appResult = null;\nlet generatedAppSource = null;\n\nfor (const item of items) {\n  const json = item.json || {};\n  if (!generatedAppSource && json.generated_app_source) generatedAppSource = json.generated_app_source;\n  if (!appResult && json.runtime_http_result) appResult = json.runtime_http_result;\n  if (Array.isArray(json.runtime_quality_failures)) failures.push(...json.runtime_quality_failures);\n  if (Array.isArray(json.runtime_quality_warnings)) warnings.push(...json.runtime_quality_warnings);\n  if (Array.isArray(json.runtime_quality_history)) qualityHistory.push(...json.runtime_quality_history);\n  if (Array.isArray(json.runtime_http_history)) httpHistory.push(...json.runtime_http_history);\n  const a = Number(json.fix_attempt ?? 0);\n  if (Number.isFinite(a)) attempts.push(a);\n}\n\nconst uniqueFailures = [...new Set(failures)];\nconst uniqueWarnings = [...new Set(warnings)];\nconst status = uniqueFailures.length ? 'fail' : 'pass';\nconst fixAttempt = attempts.length ? Math.max(...attempts) : Number(latest.fix_attempt || first.fix_attempt || 0);\nconst maxFixAttempts = Number(latest.max_fix_attempts || first.max_fix_attempts || 10);\n\nreturn [{\n  json: {\n    ...first,\n    ...latest,\n    generated_app_source: generatedAppSource || latest.generated_app_source || {},\n    runtime_quality_status: status,\n    runtime_quality_failures: uniqueFailures,\n    runtime_quality_warnings: uniqueWarnings,\n    runtime_http_result: appResult || latest.runtime_http_result || {},\n    runtime_quality_history: qualityHistory.length ? qualityHistory : (latest.runtime_quality_history || []),\n    runtime_http_history: httpHistory.length ? httpHistory : (latest.runtime_http_history || []),\n    runtime_comparison: latest.runtime_comparison || {},\n    fix_attempt: fixAttempt,\n    max_fix_attempts: maxFixAttempts,\n    collapsed_runtime_validation_count: items.length,\n    single_global_fix_required: status === 'fail',\n    hard_single_item: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16656,
+        2736
+      ],
+      "id": "dc4ba21c-edbb-4d29-9d87-d21a21c6a889",
+      "name": "Collapse Runtime Validation Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst first = items[0]?.json || {};\nconst latest = items[items.length - 1]?.json || first;\nconst failures = [];\nconst warnings = [];\nconst qualityHistory = [];\nconst httpHistory = [];\nconst attempts = [];\nlet generatedAppSource = null;\nlet runtimeHttpResult = null;\n\nfor (const item of items) {\n  const json = item.json || {};\n  if (!generatedAppSource && json.generated_app_source) generatedAppSource = json.generated_app_source;\n  if (!runtimeHttpResult && json.runtime_http_result) runtimeHttpResult = json.runtime_http_result;\n  if (Array.isArray(json.runtime_quality_failures)) failures.push(...json.runtime_quality_failures);\n  if (Array.isArray(json.runtime_quality_warnings)) warnings.push(...json.runtime_quality_warnings);\n  if (Array.isArray(json.runtime_quality_history)) qualityHistory.push(...json.runtime_quality_history);\n  if (Array.isArray(json.runtime_http_history)) httpHistory.push(...json.runtime_http_history);\n  const a = Number(json.fix_attempt ?? 0);\n  if (Number.isFinite(a)) attempts.push(a);\n}\n\nconst uniqueFailures = [...new Set(failures.length ? failures : (latest.runtime_quality_failures || []))];\nconst uniqueWarnings = [...new Set(warnings.length ? warnings : (latest.runtime_quality_warnings || []))];\nconst globalFixAttempt = attempts.length ? Math.max(...attempts) : Number(latest.fix_attempt || first.fix_attempt || 0);\nconst maxFixAttempts = Number(latest.max_fix_attempts || first.max_fix_attempts || 10);\n\nreturn [{\n  json: {\n    ...first,\n    ...latest,\n    generated_app_source: generatedAppSource || latest.generated_app_source || {},\n    runtime_quality_status: uniqueFailures.length ? 'fail' : 'pass',\n    runtime_quality_failures: uniqueFailures,\n    runtime_quality_warnings: uniqueWarnings,\n    runtime_quality_history: qualityHistory.length ? qualityHistory : (latest.runtime_quality_history || []),\n    runtime_http_history: httpHistory.length ? httpHistory : (latest.runtime_http_history || []),\n    runtime_http_result: runtimeHttpResult || latest.runtime_http_result || {},\n    fix_attempt: globalFixAttempt,\n    max_fix_attempts: maxFixAttempts,\n    can_retry_fix: globalFixAttempt < maxFixAttempts,\n    collapsed_before_retry_gate_count: items.length,\n    hard_single_item_before_retry: true\n  }\n}];"
+      },
+      "id": "76637419-4699-4d57-82ec-b09c0188304b",
+      "name": "Hard Collapse Before Retry Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17808,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst first = items[0]?.json || {};\nconst latest = items[items.length - 1]?.json || first;\nconst prompts = items.map(i => i.json?.prompt).filter(Boolean);\nconst failures = [];\nconst warnings = [];\nconst attempts = [];\nlet generatedAppSource = null;\nlet runtimeHttpResult = null;\n\nfor (const item of items) {\n  const json = item.json || {};\n  if (!generatedAppSource && json.generated_app_source) generatedAppSource = json.generated_app_source;\n  if (!runtimeHttpResult && json.runtime_http_result) runtimeHttpResult = json.runtime_http_result;\n  if (Array.isArray(json.runtime_quality_failures)) failures.push(...json.runtime_quality_failures);\n  if (Array.isArray(json.runtime_quality_warnings)) warnings.push(...json.runtime_quality_warnings);\n  const a = Number(json.fix_attempt ?? 0);\n  if (Number.isFinite(a)) attempts.push(a);\n}\n\nconst globalFixAttempt = attempts.length ? Math.max(...attempts) : Number(latest.fix_attempt || first.fix_attempt || 0);\nconst maxFixAttempts = Number(latest.max_fix_attempts || first.max_fix_attempts || 10);\nconst prompt = prompts[prompts.length - 1] || latest.prompt || first.prompt;\n\nreturn [{\n  json: {\n    ...first,\n    ...latest,\n    prompt,\n    generated_app_source: generatedAppSource || latest.generated_app_source || {},\n    runtime_http_result: runtimeHttpResult || latest.runtime_http_result || {},\n    runtime_quality_failures: [...new Set(failures.length ? failures : (latest.runtime_quality_failures || []))],\n    runtime_quality_warnings: [...new Set(warnings.length ? warnings : (latest.runtime_quality_warnings || []))],\n    fix_attempt: globalFixAttempt,\n    max_fix_attempts: maxFixAttempts,\n    collapsed_before_fix_agent_count: items.length,\n    hard_single_item_before_fix_agent: true,\n    global_fix_call_number: globalFixAttempt + 1\n  }\n}];"
+      },
+      "id": "5ba0956c-b0e8-4737-86ae-725736a03ccc",
+      "name": "Hard Collapse Before Fix Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        18992,
+        3376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst item = $input.first()?.json || {};\nconst maxFixAttempts = Number(item.max_fix_attempts || 10);\n\ndata.lifecycleV8 = {\n  execution_id: $execution.id,\n  design_thinking: false,\n  azure_payload_prepared: false,\n  production_by_user_story: false,\n  user_story_conformity: false,\n  security_backlog: false,\n  deployment_maintenance: false,\n  user_stories: [],\n  azure_user_story_payload: [],\n  generated_user_story_outputs: [],\n  user_story_conformity_report: {},\n  security_improvement_backlog: [],\n  deployment_readiness: {},\n  maintenance_self_healing_report: {},\n  started_at: new Date().toISOString()\n};\n\ndata.runtimeQualityLoop = {\n  execution_id: $execution.id,\n  fix_attempts_used: 0,\n  max_fix_attempts: maxFixAttempts,\n  authorized_fix_calls: 0,\n  stopped: false,\n  started_at: new Date().toISOString()\n};\n\nreturn [{\n  json: {\n    ...item,\n    fix_attempt: 0,\n    next_fix_attempt: 0,\n    fix_attempts_used_global: 0,\n    authorized_fix_calls_global: 0,\n    max_fix_attempts: maxFixAttempts,\n    can_retry_fix: false,\n    runtime_loop_state_reset: true,\n    hard_global_retry_guard: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15840,
+        1360
+      ],
+      "id": "4be997da-8195-4711-9e6a-e05d4c97b488",
+      "name": "Reset Runtime Loop State"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst latest = items[items.length - 1]?.json || {};\nconst data = $getWorkflowStaticData('global');\n\nif (!data.runtimeQualityLoop || data.runtimeQualityLoop.execution_id !== $execution.id) {\n  data.runtimeQualityLoop = {\n    execution_id: $execution.id,\n    fix_attempts_used: Number(latest.fix_attempts_used_global || latest.fix_attempt || 0),\n    max_fix_attempts: Number(latest.max_fix_attempts || 10),\n    authorized_fix_calls: Number(latest.authorized_fix_calls_global || 0),\n    stopped: false,\n    started_at: new Date().toISOString()\n  };\n}\n\nconst state = data.runtimeQualityLoop;\nconst maxFixAttempts = Number(latest.max_fix_attempts || state.max_fix_attempts || 10);\nstate.max_fix_attempts = maxFixAttempts;\n\nconst failures = Array.isArray(latest.runtime_quality_failures) ? [...new Set(latest.runtime_quality_failures)] : [];\nconst status = latest.runtime_quality_status || (failures.length ? 'fail' : 'pass');\nconst currentAttempt = Number(state.fix_attempts_used || 0);\n\nconst environmentOnlyFailures = failures.length > 0 && failures.every(f =>\n  f === 'runtime_http_app_unreachable' ||\n  String(f).startsWith('runtime_http_app_unreachable') ||\n  String(f).startsWith('runtime_http_environment_')\n);\n\nconst maxReached = currentAttempt >= maxFixAttempts;\nconst canRetry = status === 'fail' && failures.length > 0 && !maxReached && !environmentOnlyFailures;\n\nlet nextAttempt = currentAttempt;\nlet guardReason = '';\n\nif (canRetry) {\n  nextAttempt = currentAttempt + 1;\n  state.fix_attempts_used = nextAttempt;\n  state.authorized_fix_calls = Number(state.authorized_fix_calls || 0) + 1;\n  state.stopped = false;\n  state.last_authorized_at = new Date().toISOString();\n  guardReason = `Authorizing ONE global fix attempt ${nextAttempt}/${maxFixAttempts}`;\n} else {\n  state.fix_attempts_used = currentAttempt;\n  state.stopped = status !== 'pass';\n  state.stopped_at = status !== 'pass' ? new Date().toISOString() : state.stopped_at;\n  guardReason = status === 'pass'\n    ? 'Runtime quality passed; continuing workflow'\n    : environmentOnlyFailures\n      ? 'Runtime app is unreachable; this is an environment/startup issue, so auto-correction is skipped and human review is required'\n      : `Max global fix attempts reached: ${currentAttempt}/${maxFixAttempts}; stopping auto-correction and continuing with human review`;\n}\n\ndata.runtimeQualityLoop = state;\n\nreturn [{\n  json: {\n    ...latest,\n    runtime_quality_status: status,\n    runtime_quality_failures: failures,\n    fix_attempt: currentAttempt,\n    next_fix_attempt: nextAttempt,\n    fix_attempts_used_global: state.fix_attempts_used,\n    authorized_fix_calls_global: state.authorized_fix_calls,\n    max_fix_attempts: maxFixAttempts,\n    can_retry_fix: canRetry,\n    auto_correction_stopped: !canRetry && status !== 'pass',\n    requires_human_review: !canRetry && status !== 'pass',\n    environment_only_failures: environmentOnlyFailures,\n    hard_global_retry_guard: true,\n    guard_reason: guardReason\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        18096,
+        3376
+      ],
+      "id": "9dbe948a-bd80-4f11-8998-492b18edf0ab",
+      "name": "Global Runtime Fix Attempt Guard"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst design = $json.design || {};\nconst fallbackStories = [\n  { id: 'US-01', title: 'Parse a free-text meal', role: 'user', need: 'enter a meal in natural language', value: 'get structured foods and quantities', priority: 'high', acceptance_criteria: ['Meal text is parsed into foods', 'Quantities are extracted when present'], dependencies: [], technical_notes: ['Use Ollama only for parsing'] },\n  { id: 'US-02', title: 'Match foods with BLV', role: 'user', need: 'map each food to an official BLV candidate', value: 'avoid invented nutrition values', priority: 'high', acceptance_criteria: ['Exact/near matches are ranked', 'Ambiguous candidates trigger human review'], dependencies: ['US-01'], technical_notes: ['Use BLV search endpoint only'] },\n  { id: 'US-03', title: 'Calculate nutrition totals', role: 'user', need: 'see totals for the meal', value: 'understand nutritional intake', priority: 'high', acceptance_criteria: ['Totals are computed from official BLV nutrients only', 'Missing values produce warnings'], dependencies: ['US-02'], technical_notes: ['Use ENERCC, PROT625, FAT, CHO codes'] },\n  { id: 'US-04', title: 'Use a readable web interface', role: 'user', need: 'an easy UI to submit and read results', value: 'make the MVP demo-friendly', priority: 'medium', acceptance_criteria: ['UI shows totals, foods, warnings, and raw JSON'], dependencies: ['US-03'], technical_notes: ['Static HTML served by Express'] },\n  { id: 'US-05', title: 'Self-heal generated code safely', role: 'developer', need: 'automatic correction without infinite loops', value: 'save debugging time', priority: 'high', acceptance_criteria: ['Max 10 code fix attempts', 'Environment issues skip auto-correction'], dependencies: [], technical_notes: ['Use global retry guard'] }\n];\nconst stories = Array.isArray(design.user_stories) && design.user_stories.length ? design.user_stories : fallbackStories;\nconst azureWorkItems = stories.map((story, index) => ({\n  simulated: true,\n  azure_type: 'User Story',\n  local_id: story.id || `US-${String(index + 1).padStart(2, '0')}`,\n  title: story.title || story.name || `User Story ${index + 1}`,\n  fields: {\n    'System.Title': story.title || story.name || `User Story ${index + 1}`,\n    'System.Description': `${story.role || 'user'} needs ${story.need || 'a nutrition feature'} so that ${story.value || 'the app provides value'}`,\n    'Microsoft.VSTS.Common.Priority': story.priority || 'medium',\n    'Microsoft.VSTS.Common.AcceptanceCriteria': Array.isArray(story.acceptance_criteria) ? story.acceptance_criteria.join('\\n') : ''\n  }\n}));\ntry {\n  const data = $getWorkflowStaticData('global');\n  const lifecycleV8 = data.lifecycleV8 || {};\n  lifecycleV8.execution_id = $execution.id;\n  lifecycleV8.design_thinking = true;\n  lifecycleV8.azure_payload_prepared = true;\n  lifecycleV8.design = design;\n  lifecycleV8.user_stories = stories;\n  lifecycleV8.azure_user_story_payload = azureWorkItems;\n  lifecycleV8.azure_sync_status = 'prepared_simulation_no_credentials';\n  lifecycleV8.updated_at = new Date().toISOString();\n  data.lifecycleV8 = lifecycleV8;\n} catch (error) {}\nreturn [{ json: { ...$json, user_stories: stories, azure_user_story_payload: azureWorkItems, azure_sync_status: 'prepared_simulation_no_credentials', lifecycle_stage_design_complete: true, lifecycle_stage_azure_payload_complete: true } }];\n"
+      },
+      "id": "d10facec-6be7-4f57-9d6e-21d4915def5d",
+      "name": "Prepare Azure DevOps User Stories Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17008,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst stories = Array.isArray($json.user_stories) ? $json.user_stories : [];\nconst production = $json.production || {};\nconst byStory = Array.isArray(production.production_by_user_story) ? production.production_by_user_story : [];\nconst outputs = stories.map((story, index) => {\n  const id = story.id || `US-${String(index + 1).padStart(2, '0')}`;\n  const generated = byStory.find(x => x.story_id === id) || {};\n  return {\n    story_id: id,\n    title: story.title || `User Story ${index + 1}`,\n    process: generated.process || { status: 'planned', summary: 'Process generated from lifecycle fallback' },\n    frontend: generated.frontend || { status: 'planned', summary: 'Pretty static UI served from app/public/index.html' },\n    backend: generated.backend || { status: 'planned', summary: 'Express /analyze endpoint with Ollama parser and BLV client' },\n    tests: generated.tests || { status: 'planned', summary: 'Static source test and optional HTTP runtime test' },\n    files: generated.files || ['app/src/server.ts', 'app/src/NutritionAnalysisApp.ts', 'app/public/index.html']\n  };\n});\nconst lifecycleBacklog = outputs.flatMap(o => [\n  { story_id: o.story_id, type: 'process', status: 'generated_or_planned' },\n  { story_id: o.story_id, type: 'frontend', status: 'generated_or_planned' },\n  { story_id: o.story_id, type: 'backend', status: 'generated_or_planned' },\n  { story_id: o.story_id, type: 'tests', status: 'generated_or_planned' }\n]);\ntry {\n  const data = $getWorkflowStaticData('global');\n  const lifecycleV8 = data.lifecycleV8 || {};\n  lifecycleV8.execution_id = $execution.id;\n  lifecycleV8.production_by_user_story = true;\n  lifecycleV8.generated_user_story_outputs = outputs;\n  lifecycleV8.lifecycle_backlog = lifecycleBacklog;\n  lifecycleV8.architecture = $json.architecture || lifecycleV8.architecture || {};\n  lifecycleV8.production = production;\n  lifecycleV8.updated_at = new Date().toISOString();\n  data.lifecycleV8 = lifecycleV8;\n} catch (error) {}\nreturn [{ json: { ...$json, generated_user_story_outputs: outputs, lifecycle_backlog: lifecycleBacklog, lifecycle_stage_production_by_story_complete: true } }];\n"
+      },
+      "id": "015c79e5-6a56-499c-b534-eec042052c5f",
+      "name": "Expand Production By User Story",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16016,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nlet lifecycleV8Static = {};\ntry { lifecycleV8Static = $getWorkflowStaticData('global').lifecycleV8 || {}; } catch (error) {}\nconst stories = Array.isArray($json.user_stories) && $json.user_stories.length ? $json.user_stories : (Array.isArray(lifecycleV8Static.user_stories) ? lifecycleV8Static.user_stories : []);\nconst outputs = Array.isArray($json.generated_user_story_outputs) && $json.generated_user_story_outputs.length ? $json.generated_user_story_outputs : (Array.isArray(lifecycleV8Static.generated_user_story_outputs) ? lifecycleV8Static.generated_user_story_outputs : []);\nconst failures = Array.isArray($json.runtime_quality_failures) && $json.runtime_quality_failures.length ? $json.runtime_quality_failures : (Array.isArray(lifecycleV8Static.last_failures) ? lifecycleV8Static.last_failures : []);\nconst checks = stories.map((story, index) => {\n  const id = story.id || `US-${String(index + 1).padStart(2, '0')}`;\n  const out = outputs.find(o => o.story_id === id);\n  const gaps = [];\n  if (!out) gaps.push('No generated output block found for this user story');\n  else {\n    for (const area of ['process','frontend','backend','tests']) if (!out[area]) gaps.push(`Missing ${area} plan`);\n  }\n  return { story_id: id, title: story.title || '', status: gaps.length ? 'warning' : 'pass', gaps, covered_areas: out ? Object.keys(out).filter(k => ['process','frontend','backend','tests'].includes(k)) : [] };\n});\nconst environmentOnly = failures.length > 0 && failures.every(f => String(f).includes('runtime_http_app_unreachable') || String(f).includes('totals_') || String(f).includes('candidate') || String(f).includes('official nutrients'));\nconst report = {\n  status: checks.some(c => c.status === 'fail') ? 'fail' : (checks.some(c => c.status === 'warning') || environmentOnly ? 'warning' : 'pass'),\n  checks,\n  runtime_failures: failures,\n  environment_only_runtime_issue: environmentOnly,\n  recommendation: environmentOnly ? 'Do not spend auto-fix attempts; verify local app/BLV runtime environment or candidate availability.' : 'Continue normal lifecycle checks.'\n};\ntry {\n  const data = $getWorkflowStaticData('global');\n  const lifecycleV8 = data.lifecycleV8 || {};\n  lifecycleV8.execution_id = $execution.id;\n  lifecycleV8.user_story_conformity = true;\n  lifecycleV8.user_story_conformity_report = report;\n  lifecycleV8.updated_at = new Date().toISOString();\n  data.lifecycleV8 = lifecycleV8;\n} catch (error) {}\nreturn [{ json: { ...$json, user_story_conformity_report: report, lifecycle_stage_test_conformity_complete: true } }];\n"
+      },
+      "id": "b88b6c9b-ecdf-4140-9f00-ec2815910a5e",
+      "name": "Create User Story Conformity Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17664,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst security = $json.security || {};\nconst findings = Array.isArray(security.findings) ? security.findings : [];\nconst fallbackBacklog = [\n  { id: 'SEC-01', title: 'Validate that nutrition values are never generated by Ollama', mitigation: 'Keep BLV-only policy and runtime checks', severity: 'high' },\n  { id: 'SEC-02', title: 'Protect local environment configuration', mitigation: 'Keep secrets out of Git and generate only safe local .env defaults', severity: 'medium' },\n  { id: 'SEC-03', title: 'Harden user input handling', mitigation: 'Validate meal text size and keep JSON-only parser outputs', severity: 'medium' }\n];\nconst backlog = Array.isArray(security.security_backlog) && security.security_backlog.length ? security.security_backlog : (findings.length ? findings.map((f, i) => ({ id: `SEC-${String(i+1).padStart(2,'0')}`, title: f.risk || f.area || 'Security improvement', mitigation: f.mitigation || 'Review manually', severity: f.severity || 'medium' })) : fallbackBacklog);\ntry {\n  const data = $getWorkflowStaticData('global');\n  const lifecycleV8 = data.lifecycleV8 || {};\n  lifecycleV8.execution_id = $execution.id;\n  lifecycleV8.security_backlog = true;\n  lifecycleV8.security = security;\n  lifecycleV8.security_improvement_backlog = backlog;\n  lifecycleV8.updated_at = new Date().toISOString();\n  data.lifecycleV8 = lifecycleV8;\n} catch (error) {}\nreturn [{ json: { ...$json, security_improvement_backlog: backlog, lifecycle_stage_security_complete: true } }];\n"
+      },
+      "id": "99951a4a-e2bf-4951-aefc-e7a9b4ada816",
+      "name": "Create Security Improvement Backlog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        19536,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst deployment = $json.deployment || {};\nconst failures = Array.isArray($json.runtime_quality_failures) ? $json.runtime_quality_failures : [];\nconst selfHealing = {\n  max_auto_fixes: Number($json.max_fix_attempts || 10),\n  code_issue_retry_policy: 'Retry code-generation fixes up to max_auto_fixes using the global retry guard.',\n  environment_issue_policy: 'Skip auto-correction and create human review for unreachable app, missing local service, or external API/candidate availability.',\n  current_failures: failures,\n  current_classification: failures.some(f => String(f).includes('unreachable')) ? 'environment_issue' : (failures.length ? 'code_or_runtime_issue' : 'healthy')\n};\nconst deploymentReadiness = deployment.deployment || deployment;\ntry {\n  const data = $getWorkflowStaticData('global');\n  const lifecycleV8 = data.lifecycleV8 || {};\n  lifecycleV8.execution_id = $execution.id;\n  lifecycleV8.deployment_maintenance = true;\n  lifecycleV8.deployment = deployment;\n  lifecycleV8.deployment_readiness = deploymentReadiness;\n  lifecycleV8.maintenance_self_healing_report = selfHealing;\n  lifecycleV8.updated_at = new Date().toISOString();\n  data.lifecycleV8 = lifecycleV8;\n} catch (error) {}\nreturn [{ json: { ...$json, deployment_readiness: deploymentReadiness, maintenance_self_healing_report: selfHealing, lifecycle_stage_deployment_maintenance_complete: true } }];\n"
+      },
+      "id": "ffb89491-9524-4b3d-8180-a8dc714e49f6",
+      "name": "Create Deployment Maintenance Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20528,
+        2720
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# AI-Workflow-Nutrition — Workflow v9.1 documenté — code généré par Ollama\n\nObjectif : générer une application d'analyse nutritionnelle prête à lancer, en passant par un cycle complet :\nDesign Thinking → Architecture → Production → Génération de code Ollama en plusieurs lots → Tests → Corrections → Sécurité → Déploiement → ZIP final.\n\nRègle centrale : Ollama aide à raisonner et parser, mais les valeurs nutritionnelles doivent venir uniquement de l'API officielle BLV.",
+        "height": 270,
+        "width": 2914,
+        "color": 4
+      },
+      "id": "0fff121d-c893-4b2a-b515-6f128f5f23f5",
+      "name": "README - Workflow AI Nutrition",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        15168,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 01 — Initialisation globale\n\nLance le workflow, définit le contexte global : projet, Ollama, modèle, API BLV, limite de corrections, règles principales.\n\n- `Manual Trigger` lance le workflow à la main.\n- `Set Global Context` pose les constantes du projet :\n  nom du projet, URL Ollama, modèle local, API BLV, endpoints BLV, limite max de corrections.\n- `Reset Runtime Loop State` remet à zéro l'état global de la boucle qualité.\n\nCette zone évite que les anciennes exécutions polluent les nouveaux tests.",
+        "height": 396,
+        "width": 902,
+        "color": 4
+      },
+      "id": "7c3276cc-f758-4ba1-92db-6bcc8c018455",
+      "name": "01 - Initialisation globale",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        15168,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 02 — Design Thinking + User Stories\n\nDemande à Ollama de générer la vision produit, les user stories et un payload simulé Azure DevOps.\n\n- Génère la vision produit.\n- Crée les user stories.\n- Prépare un payload simulé compatible Azure DevOps.\n\nBut : partir d'un besoin métier clair avant de produire du code.",
+        "height": 380,
+        "width": 1034,
+        "color": 7
+      },
+      "id": "34513e95-1c7f-48d8-b033-46b2d9e322a5",
+      "name": "02 - Design Thinking et Azure DevOps",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16112,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 03 — Architecture globale\n\nDemande à Ollama de transformer les user stories en architecture technique : modules, data flow, frontend, backend, tests, sécurité.\n\nOllama transforme les user stories en architecture technique :\n- modules frontend / backend / tests / sécurité,\n- data flow complet,\n- contraintes locales : n8n + Ollama + Node/Express.\n\nCette étape sert de plan directeur pour la génération.",
+        "height": 380,
+        "width": 902,
+        "color": 7
+      },
+      "id": "d18b9ee5-fde9-43ea-973f-40d4048d8329",
+      "name": "03 - Architecture globale",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        17184,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 04 — Production de l'application\n\n- Génère le plan de production, puis déclenche la génération de code par Ollama.\n- Décompose chaque user story en process, front, back, tests et fichiers.\n- `Call Ollama Code Generation` demande à Ollama de générer les fichiers TypeScript / HTML / README / .env.\n\nLe workflow garde le contexte, mais le code final de l’app est produit par Ollama puis validé par n8n.",
+        "height": 676,
+        "width": 2944,
+        "color": 4
+      },
+      "id": "41010c47-498f-4e97-91f3-2bfbd1704839",
+      "name": "04 - Production par user story",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        15152,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "content": "##  Règle non négociable\n\nOllama ne doit jamais inventer :\n- calories,\n- protéines,\n- lipides,\n- glucides,\n- micronutriments.\n\nLes nutriments viennent uniquement de `official_nutrients` récupéré via BLV.\nSi la donnée manque ou si le match est ambigu : warning ou human review.",
+        "height": 270,
+        "width": 1180,
+        "color": 4
+      },
+      "id": "a83e5195-d2fd-46a2-a55c-2af2e96abec6",
+      "name": "05 - Règle critique BLV uniquement",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16528,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 05 — Runtime Quality Gates\n\nVérifie statiquement les fichiers générés : fichiers obligatoires, .env, cache BLV, human review, appels BLV, calculs nutritionnels.\n\nLe workflow contrôle la qualité avant d'aller plus loin :\n- tests statiques sur les fichiers générés,\n- vérification des endpoints BLV,\n- présence du cache BLV,\n- présence du mode human review,\n- contrôle des calculs de macros depuis les codes BLV.\n\nSi ça passe, le workflow continue. Sinon, il entre en boucle de correction.",
+        "height": 420,
+        "width": 760,
+        "color": 4
+      },
+      "id": "e2ee667f-ba65-4047-8a41-9854fe6c2dcf",
+      "name": "06 - Runtime quality gates",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        15120,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 06 — Test HTTP réel\n\nAppelle réellement l’endpoint /analyze de l’application générée pour vérifier son comportement.\n\nCette zone appelle l'application générée sur `/analyze`.\n\nElle vérifie :\n- que les aliments sont détectés,\n- que les quantités sont normalisées,\n- que les totals calories/protéines/lipides/glucides sont numériques quand BLV retourne des nutriments,\n- que la provenance reste `official BLV API only`.\n\nSi l'app locale n'est pas lancée, c'est classé comme problème d'environnement.",
+        "height": 420,
+        "width": 1220,
+        "color": 4
+      },
+      "id": "780757e6-34dc-44f3-9e77-182ec663acd2",
+      "name": "07 - Test HTTP réel de l'app",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        15968,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 07 — Collapse des validations\n\nRegroupe les résultats de validation en un seul rapport global pour éviter plusieurs corrections en parallèle\n\nPourquoi ?\n- éviter 10 corrections en parallèle,\n- garder une seule décision claire,\n- éviter que le fix agent corrige plusieurs fois le même problème.",
+        "height": 420,
+        "width": 560,
+        "color": 4
+      },
+      "id": "c4d216fc-8b84-485c-85d3-f2a9a5ce7734",
+      "name": "08 - Collapse anti-parallèle",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        17280,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 08 — Boucle de correction sécurisée\n\n`Global Runtime Fix Attempt Guard` décide si une correction automatique est autorisée.\n\nRègles :\n- maximum 10 vraies corrections code,\n- pas de retry si l'erreur vient seulement de l'environnement,\n- arrêt en human review si la limite est atteinte,\n- un seul appel global au fix agent par tentative.",
+        "height": 420,
+        "width": 760,
+        "color": 4
+      },
+      "id": "1effe584-f288-44ec-b148-383cce85e2b6",
+      "name": "09 - Boucle de correction max 10",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        17728,
+        3104
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 09 — Runtime Fix Agent\n\nRenvoie les erreurs à Ollama pour qu’il génère les fichiers corrigés, sans inventer de valeurs nutritionnelles.\n\nLe fix agent reçoit :\n- les failures globales,\n- le résultat HTTP si disponible,\n- les règles de sécurité.\n\nIl doit proposer une correction minimale.\nIl n'a pas le droit d'ajouter des valeurs nutritionnelles fixes.\n`Apply Safe Runtime Patch` applique seulement des patchs contrôlés.",
+        "height": 420,
+        "width": 1420,
+        "color": 4
+      },
+      "id": "2b50b427-5bf7-4a51-871d-d8d1c0666d72",
+      "name": "10 - Fix agent sécurisé",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        18576,
+        3104
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 10 — Human Review\n\nArrête la correction automatique si le problème est ambigu, externe, environnemental ou si la limite est atteinte.\n\nSi la correction auto n'est pas adaptée :\n- max 10 atteint,\n- app non lancée,\n- problème externe BLV,\n- ambiguïté trop forte,\n\nalors le workflow produit un rapport `runtime-human-review-required.txt`.\nLe workflow reste sûr au lieu de forcer une mauvaise correction.",
+        "height": 360,
+        "width": 760,
+        "color": 4
+      },
+      "id": "3c134cae-ec8c-4362-8a5f-e94311d625f2",
+      "name": "11 - Human review",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        18368,
+        3744
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 11 — Test / amélioration\n\nVérifie si les user stories sont couvertes et propose des améliorations globales.\n\nCette étape vérifie si les user stories sont bien couvertes :\n- process,\n- frontend,\n- backend,\n- tests,\n- conformité globale.\n\nElle propose des améliorations sans forcément modifier le code.",
+        "height": 420,
+        "width": 864,
+        "color": 7
+      },
+      "id": "f95924db-f72a-453b-8d02-0de4d551931e",
+      "name": "12 - Test et amélioration théorique",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        17920,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 12 — Sécurité\n\nAnalyse les risques :\n- données repas utilisateur,\n- exposition d'Ollama,\n- configuration `.env`,\n- appels API,\n- logs et erreurs.\n\nGénère ensuite un backlog d'améliorations sécurité pour le projet.",
+        "height": 404,
+        "width": 840,
+        "color": 7
+      },
+      "id": "9da84519-f8b5-4978-929f-5f8a7bd017ca",
+      "name": "13 - Sécurité",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        18896,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 13 — Déploiement / Maintenance\n\nProduit :\n- les étapes de lancement local,\n- les commandes utiles,\n- les health checks,\n- les règles de self-healing.\n\nImportant : le workflow distingue problème de code et problème d'environnement.",
+        "height": 420,
+        "width": 896,
+        "color": 7
+      },
+      "id": "5446650e-39f4-40dd-9b53-a4677051a8ba",
+      "name": "14 - Déploiement et maintenance",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        19824,
+        2432
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 14 — Génération du package final\n\nCette zone fabrique :\n- `app-ready-to-run.zip`,\n- le rapport final lifecycle,\n- le manifest du ZIP,\n- les fichiers lifecycle / sécurité / maintenance.\n\n`Validate Final ZIP Contents` vérifie que tous les fichiers essentiels sont présents avant le téléchargement.",
+        "height": 436,
+        "width": 760,
+        "color": 4
+      },
+      "id": "3ee11b90-08cb-4012-b9e0-28e8d4e13d59",
+      "name": "15 - Package final ZIP",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        20816,
+        2416
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Sortie finale\n\n`FINAL - Download App ZIP` retourne le ZIP prêt à utiliser.\n\nUtilisation :\n1. Télécharger le ZIP\n2. Extraire\n3. `cd app`\n4. `npm install`\n5. `npm run dev`\n\nPuis ouvrir `http://localhost:3000`.",
+        "height": 452,
+        "width": 620,
+        "color": 4
+      },
+      "id": "c17bf603-8fa0-4c04-a05e-e09845ee6e3b",
+      "name": "16 - Sortie finale",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        21616,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const groupName = \"config and project setup\";\nconst groupRequiredFiles = [\"app/package.json\", \"app/tsconfig.json\", \"app/.env.example\", \"app/.env\", \"app/README.md\"];\nconst groupRequirements = [\"package.json must include scripts dev, build and start. Prefer tsx for dev and TypeScript compiler for build.\", \"tsconfig must support NodeNext modules and strict TypeScript.\", \".env.example and .env must include PORT, OLLAMA_URL, OLLAMA_MODEL, BLV_API_BASE_URL, BLV_SEARCH_PATH=foods, BLV_DETAIL_PATH=food/:id, BLV_CACHE_ENABLED=true, HUMAN_REVIEW thresholds.\", \"README must explain npm install and npm run dev.\"];\nconst context = {\n  project_name: $json.project_name || 'AI-Workflow-Nutrition',\n  policy: $json.policy || 'Nutrition values must come only from official BLV API. Never add manual nutrient values.',\n  blv_api_base_url: $json.blv_api_base_url || 'https://api.webapp.prod.blv.foodcase-services.com/BLV_WebApp_WS/webresources/BLV-api',\n  blv_search_path: $json.blv_search_path || 'foods',\n  blv_detail_path: $json.blv_detail_path || 'food/:id',\n  user_stories: $json.user_stories || [],\n  architecture: $json.architecture || {},\n  production: $json.production || {},\n  generated_user_story_outputs: $json.generated_user_story_outputs || [],\n  existing_generated_app_source_files: Object.keys($json.generated_app_source || {})\n};\nconst prompt = `You are Ollama, the CODE GENERATION AGENT for AI-Workflow-Nutrition.\nReturn STRICT JSON ONLY. No markdown. No prose outside JSON.\n\nIMPORTANT\nn8n is only the centralized orchestrator. The application code must be generated by you, Ollama.\nGenerate ONLY this file group: ${groupName}.\n\nPROJECT CONTEXT\n${JSON.stringify(context, null, 2)}\n\nFILES TO GENERATE IN THIS CALL\n${groupRequiredFiles.map(f => '- ' + f).join('\\n')}\n\nGROUP REQUIREMENTS\n${groupRequirements.map(r => '- ' + r).join('\\n')}\n\nGLOBAL APP RULES\n- Node/Express + TypeScript app.\n- Use Express, cors, dotenv and native fetch.\n- GET /health must return JSON status ok.\n- POST /analyze must accept {\"raw_meal_input\":\"...\"}.\n- Ollama may parse food names/quantities/units but must NEVER generate nutrition values.\n- All calories, proteins, fat, carbohydrates and micronutrients must come only from the official Swiss BLV API response.\n- BLV config: BLV_SEARCH_PATH=foods and BLV_DETAIL_PATH=food/:id.\n- BLVClient must use query parameter named \"search\".\n- Include cache and human review when candidates are missing or ambiguous.\n- NutritionCalculator must derive totals from official_nutrients only and support ENERCC, PROT625, FAT, CHO plus common fallback codes/names.\n- Do not hardcode nutrition values anywhere.\n\nREQUIRED JSON OUTPUT SHAPE\n{\n  \"generation_metadata\": {\n    \"generated_by\": \"ollama\",\n    \"group\": \"${groupName}\",\n    \"notes\": []\n  },\n  \"files\": [\n    {\"path\":\"app/example.ts\",\"content\":\"full file content\"}\n  ]\n}\n\nJSON RULES\n- Return valid JSON parseable by JSON.parse.\n- Escape newlines inside content strings.\n- Do not use markdown code fences.\n- Include every requested file exactly once.\n- Do not include files from other groups.\n`;\nreturn [{ json: { ...$json, prompt, ollama_generation_group: groupName, group_required_files: groupRequiredFiles, ollama_group_position: \"Build Ollama Config Files Prompt\" } }];"
+      },
+      "id": "5034676b-4a3e-4dd4-af6d-bf178649e05f",
+      "name": "Build Ollama Config Files Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16320,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.03, num_ctx: 8192, num_predict: 12000 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "f96c419c-180b-4fb7-9908-edcdf5fbffba",
+      "name": "Call Ollama Config Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        16560,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function txt(i){\n  if(typeof i.response==='string') return i.response;\n  if(typeof i.data==='string') return i.data;\n  if(typeof i.body==='string') return i.body;\n  return JSON.stringify(i || {});\n}\nfunction clean(s){\n  return String(s || '').replace(/^```json\\s*/i,'').replace(/^```\\s*/i,'').replace(/```\\s*$/i,'').trim();\n}\nfunction parseJson(s){\n  const raw = clean(s);\n  try { return JSON.parse(raw); } catch {}\n  const a = raw.indexOf('{'); const b = raw.lastIndexOf('}');\n  if (a >= 0 && b > a) { try { return JSON.parse(raw.slice(a,b+1)); } catch {} }\n  return { __parse_error: true, raw: raw.slice(0, 5000) };\n}\nfunction lastJson(nodeName){\n  try { const items = $items(nodeName); if(Array.isArray(items) && items.length) return items[items.length-1].json || {}; } catch(e) {}\n  return {};\n}\nfunction looksLikePath(k){ return typeof k === 'string' && (k.startsWith('app/') || k.includes('/')); }\nfunction normalizeFiles(payload){\n  if (!payload) return {};\n  if (Array.isArray(payload)) {\n    const out = {};\n    for (const f of payload) if (f && f.path && typeof f.content === 'string') out[String(f.path)] = f.content;\n    return out;\n  }\n  if (payload.files && Array.isArray(payload.files)) return normalizeFiles(payload.files);\n  if (payload.generated_app_source) {\n    const nested = normalizeFiles(payload.generated_app_source);\n    if (Object.keys(nested).length) return nested;\n  }\n  if (typeof payload === 'object') {\n    const out = {};\n    for (const [k,v] of Object.entries(payload)) {\n      if (looksLikePath(k) && typeof v === 'string') out[k] = v;\n      else if (looksLikePath(k) && v && typeof v === 'object' && typeof v.content === 'string') out[k] = v.content;\n    }\n    return out;\n  }\n  return {};\n}\nconst base = lastJson(\"Build Ollama Config Files Prompt\");\nlet payload = parseJson(txt($json));\nif (payload && typeof payload.response === 'string') payload = parseJson(payload.response);\nconst files = normalizeFiles(payload);\nconst required = Array.isArray(base.group_required_files) ? base.group_required_files : [];\nconst missing = required.filter(path => typeof files[path] !== 'string' || files[path].trim().length === 0);\nconst failures = [];\nif (payload.__parse_error) failures.push('ollama_group_json_parse_error:' + (base.ollama_generation_group || 'unknown'));\nif (Object.keys(files).length === 0) failures.push('ollama_group_empty:' + (base.ollama_generation_group || 'unknown'));\nfor (const path of missing) failures.push('ollama_group_missing_required_file:' + path);\nreturn [{ json: {\n  ...base,\n  partial_generated_app_source: files,\n  generated_app_source: { ...($json.generated_app_source || {}), ...files },\n  generation_metadata: payload.generation_metadata || { generated_by:'ollama', group: base.ollama_generation_group, warning:'metadata missing' },\n  runtime_quality_failures: [...($json.runtime_quality_failures || []), ...failures],\n  runtime_quality_warnings: missing.length ? [...($json.runtime_quality_warnings || []), 'Ollama group did not return all required files: ' + missing.join(', ')] : ($json.runtime_quality_warnings || []),\n  ollama_group_raw_preview: payload.__parse_error ? payload.raw : undefined,\n  app_source_generated_by: 'ollama'\n}}];\n"
+      },
+      "id": "a027af7d-bf87-4f67-821c-813242d45d37",
+      "name": "Parse Ollama Config Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16800,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const groupName = \"domain parser normalizer and BLV client\";\nconst groupRequiredFiles = [\"app/src/domain/NormalizedFood.ts\", \"app/src/domain/NutritionTotals.ts\", \"app/src/services/OllamaMealParser.ts\", \"app/src/services/QuantityNormalizer.ts\", \"app/src/services/BLVClient.ts\"];\nconst groupRequirements = [\"NormalizedFood and NutritionTotals must be domain classes or typed exports.\", \"OllamaMealParser must call local Ollama for parsing only and include deterministic fallback parsing.\", \"QuantityNormalizer must convert grams/kg and estimate simple units deterministically.\", \"BLVClient must implement searchFood, getNutrients, cacheStats and use search/detail cache.\", \"BLVClient searchFood must use URL search parameter named search.\"];\nconst context = {\n  project_name: $json.project_name || 'AI-Workflow-Nutrition',\n  policy: $json.policy || 'Nutrition values must come only from official BLV API. Never add manual nutrient values.',\n  blv_api_base_url: $json.blv_api_base_url || 'https://api.webapp.prod.blv.foodcase-services.com/BLV_WebApp_WS/webresources/BLV-api',\n  blv_search_path: $json.blv_search_path || 'foods',\n  blv_detail_path: $json.blv_detail_path || 'food/:id',\n  user_stories: $json.user_stories || [],\n  architecture: $json.architecture || {},\n  production: $json.production || {},\n  generated_user_story_outputs: $json.generated_user_story_outputs || [],\n  existing_generated_app_source_files: Object.keys($json.generated_app_source || {})\n};\nconst prompt = `You are Ollama, the CODE GENERATION AGENT for AI-Workflow-Nutrition.\nReturn STRICT JSON ONLY. No markdown. No prose outside JSON.\n\nIMPORTANT\nn8n is only the centralized orchestrator. The application code must be generated by you, Ollama.\nGenerate ONLY this file group: ${groupName}.\n\nPROJECT CONTEXT\n${JSON.stringify(context, null, 2)}\n\nFILES TO GENERATE IN THIS CALL\n${groupRequiredFiles.map(f => '- ' + f).join('\\n')}\n\nGROUP REQUIREMENTS\n${groupRequirements.map(r => '- ' + r).join('\\n')}\n\nGLOBAL APP RULES\n- Node/Express + TypeScript app.\n- Use Express, cors, dotenv and native fetch.\n- GET /health must return JSON status ok.\n- POST /analyze must accept {\"raw_meal_input\":\"...\"}.\n- Ollama may parse food names/quantities/units but must NEVER generate nutrition values.\n- All calories, proteins, fat, carbohydrates and micronutrients must come only from the official Swiss BLV API response.\n- BLV config: BLV_SEARCH_PATH=foods and BLV_DETAIL_PATH=food/:id.\n- BLVClient must use query parameter named \"search\".\n- Include cache and human review when candidates are missing or ambiguous.\n- NutritionCalculator must derive totals from official_nutrients only and support ENERCC, PROT625, FAT, CHO plus common fallback codes/names.\n- Do not hardcode nutrition values anywhere.\n\nREQUIRED JSON OUTPUT SHAPE\n{\n  \"generation_metadata\": {\n    \"generated_by\": \"ollama\",\n    \"group\": \"${groupName}\",\n    \"notes\": []\n  },\n  \"files\": [\n    {\"path\":\"app/example.ts\",\"content\":\"full file content\"}\n  ]\n}\n\nJSON RULES\n- Return valid JSON parseable by JSON.parse.\n- Escape newlines inside content strings.\n- Do not use markdown code fences.\n- Include every requested file exactly once.\n- Do not include files from other groups.\n`;\nreturn [{ json: { ...$json, prompt, ollama_generation_group: groupName, group_required_files: groupRequiredFiles, ollama_group_position: \"Build Ollama Parser BLV Prompt\" } }];"
+      },
+      "id": "daf3ec92-f2a1-4d2c-8bbb-f01303d79f89",
+      "name": "Build Ollama Parser BLV Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17056,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.03, num_ctx: 8192, num_predict: 12000 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "06f4228b-82a7-4cc3-84a5-00ef51ff7251",
+      "name": "Call Ollama Parser BLV Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        17312,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function txt(i){\n  if(typeof i.response==='string') return i.response;\n  if(typeof i.data==='string') return i.data;\n  if(typeof i.body==='string') return i.body;\n  return JSON.stringify(i || {});\n}\nfunction clean(s){\n  return String(s || '').replace(/^```json\\s*/i,'').replace(/^```\\s*/i,'').replace(/```\\s*$/i,'').trim();\n}\nfunction parseJson(s){\n  const raw = clean(s);\n  try { return JSON.parse(raw); } catch {}\n  const a = raw.indexOf('{'); const b = raw.lastIndexOf('}');\n  if (a >= 0 && b > a) { try { return JSON.parse(raw.slice(a,b+1)); } catch {} }\n  return { __parse_error: true, raw: raw.slice(0, 5000) };\n}\nfunction lastJson(nodeName){\n  try { const items = $items(nodeName); if(Array.isArray(items) && items.length) return items[items.length-1].json || {}; } catch(e) {}\n  return {};\n}\nfunction looksLikePath(k){ return typeof k === 'string' && (k.startsWith('app/') || k.includes('/')); }\nfunction normalizeFiles(payload){\n  if (!payload) return {};\n  if (Array.isArray(payload)) {\n    const out = {};\n    for (const f of payload) if (f && f.path && typeof f.content === 'string') out[String(f.path)] = f.content;\n    return out;\n  }\n  if (payload.files && Array.isArray(payload.files)) return normalizeFiles(payload.files);\n  if (payload.generated_app_source) {\n    const nested = normalizeFiles(payload.generated_app_source);\n    if (Object.keys(nested).length) return nested;\n  }\n  if (typeof payload === 'object') {\n    const out = {};\n    for (const [k,v] of Object.entries(payload)) {\n      if (looksLikePath(k) && typeof v === 'string') out[k] = v;\n      else if (looksLikePath(k) && v && typeof v === 'object' && typeof v.content === 'string') out[k] = v.content;\n    }\n    return out;\n  }\n  return {};\n}\nconst base = lastJson(\"Build Ollama Parser BLV Prompt\");\nlet payload = parseJson(txt($json));\nif (payload && typeof payload.response === 'string') payload = parseJson(payload.response);\nconst files = normalizeFiles(payload);\nconst required = Array.isArray(base.group_required_files) ? base.group_required_files : [];\nconst missing = required.filter(path => typeof files[path] !== 'string' || files[path].trim().length === 0);\nconst failures = [];\nif (payload.__parse_error) failures.push('ollama_group_json_parse_error:' + (base.ollama_generation_group || 'unknown'));\nif (Object.keys(files).length === 0) failures.push('ollama_group_empty:' + (base.ollama_generation_group || 'unknown'));\nfor (const path of missing) failures.push('ollama_group_missing_required_file:' + path);\nreturn [{ json: {\n  ...base,\n  partial_generated_app_source: files,\n  generated_app_source: { ...($json.generated_app_source || {}), ...files },\n  generation_metadata: payload.generation_metadata || { generated_by:'ollama', group: base.ollama_generation_group, warning:'metadata missing' },\n  runtime_quality_failures: [...($json.runtime_quality_failures || []), ...failures],\n  runtime_quality_warnings: missing.length ? [...($json.runtime_quality_warnings || []), 'Ollama group did not return all required files: ' + missing.join(', ')] : ($json.runtime_quality_warnings || []),\n  ollama_group_raw_preview: payload.__parse_error ? payload.raw : undefined,\n  app_source_generated_by: 'ollama'\n}}];\n"
+      },
+      "id": "44a6c59a-cc10-4c7c-80e2-e84e7425a8db",
+      "name": "Parse Ollama Parser BLV Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17568,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const groupName = \"candidate review nutrition calculation app orchestration and server\";\nconst groupRequiredFiles = [\"app/src/services/CandidateReviewer.ts\", \"app/src/services/NutritionCalculator.ts\", \"app/src/NutritionAnalysisApp.ts\", \"app/src/server.ts\"];\nconst groupRequirements = [\"CandidateReviewer must rank BLV candidates and return reviewRequired boolean for ambiguity/missing match.\", \"NutritionCalculator must compute totals only from official_nutrients and never hardcode nutrition values.\", \"NutritionAnalysisApp must orchestrate parser, normalizer, BLV search/detail, candidate review and calculator.\", \"server.ts must expose GET /health and POST /analyze and serve app/public as static frontend.\", \"Return data_policy exactly including official BLV API only; no invented nutrition values.\"];\nconst context = {\n  project_name: $json.project_name || 'AI-Workflow-Nutrition',\n  policy: $json.policy || 'Nutrition values must come only from official BLV API. Never add manual nutrient values.',\n  blv_api_base_url: $json.blv_api_base_url || 'https://api.webapp.prod.blv.foodcase-services.com/BLV_WebApp_WS/webresources/BLV-api',\n  blv_search_path: $json.blv_search_path || 'foods',\n  blv_detail_path: $json.blv_detail_path || 'food/:id',\n  user_stories: $json.user_stories || [],\n  architecture: $json.architecture || {},\n  production: $json.production || {},\n  generated_user_story_outputs: $json.generated_user_story_outputs || [],\n  existing_generated_app_source_files: Object.keys($json.generated_app_source || {})\n};\nconst prompt = `You are Ollama, the CODE GENERATION AGENT for AI-Workflow-Nutrition.\nReturn STRICT JSON ONLY. No markdown. No prose outside JSON.\n\nIMPORTANT\nn8n is only the centralized orchestrator. The application code must be generated by you, Ollama.\nGenerate ONLY this file group: ${groupName}.\n\nPROJECT CONTEXT\n${JSON.stringify(context, null, 2)}\n\nFILES TO GENERATE IN THIS CALL\n${groupRequiredFiles.map(f => '- ' + f).join('\\n')}\n\nGROUP REQUIREMENTS\n${groupRequirements.map(r => '- ' + r).join('\\n')}\n\nGLOBAL APP RULES\n- Node/Express + TypeScript app.\n- Use Express, cors, dotenv and native fetch.\n- GET /health must return JSON status ok.\n- POST /analyze must accept {\"raw_meal_input\":\"...\"}.\n- Ollama may parse food names/quantities/units but must NEVER generate nutrition values.\n- All calories, proteins, fat, carbohydrates and micronutrients must come only from the official Swiss BLV API response.\n- BLV config: BLV_SEARCH_PATH=foods and BLV_DETAIL_PATH=food/:id.\n- BLVClient must use query parameter named \"search\".\n- Include cache and human review when candidates are missing or ambiguous.\n- NutritionCalculator must derive totals from official_nutrients only and support ENERCC, PROT625, FAT, CHO plus common fallback codes/names.\n- Do not hardcode nutrition values anywhere.\n\nREQUIRED JSON OUTPUT SHAPE\n{\n  \"generation_metadata\": {\n    \"generated_by\": \"ollama\",\n    \"group\": \"${groupName}\",\n    \"notes\": []\n  },\n  \"files\": [\n    {\"path\":\"app/example.ts\",\"content\":\"full file content\"}\n  ]\n}\n\nJSON RULES\n- Return valid JSON parseable by JSON.parse.\n- Escape newlines inside content strings.\n- Do not use markdown code fences.\n- Include every requested file exactly once.\n- Do not include files from other groups.\n`;\nreturn [{ json: { ...$json, prompt, ollama_generation_group: groupName, group_required_files: groupRequiredFiles, ollama_group_position: \"Build Ollama App Logic Prompt\" } }];"
+      },
+      "id": "5e084656-0974-4abf-af28-939cbdd47129",
+      "name": "Build Ollama App Logic Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17776,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.03, num_ctx: 8192, num_predict: 12000 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "498b897d-a51c-4d05-87a6-86e410dcf487",
+      "name": "Call Ollama App Logic Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        15184,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function txt(i){\n  if(typeof i.response==='string') return i.response;\n  if(typeof i.data==='string') return i.data;\n  if(typeof i.body==='string') return i.body;\n  return JSON.stringify(i || {});\n}\nfunction clean(s){\n  return String(s || '').replace(/^```json\\s*/i,'').replace(/^```\\s*/i,'').replace(/```\\s*$/i,'').trim();\n}\nfunction parseJson(s){\n  const raw = clean(s);\n  try { return JSON.parse(raw); } catch {}\n  const a = raw.indexOf('{'); const b = raw.lastIndexOf('}');\n  if (a >= 0 && b > a) { try { return JSON.parse(raw.slice(a,b+1)); } catch {} }\n  return { __parse_error: true, raw: raw.slice(0, 5000) };\n}\nfunction lastJson(nodeName){\n  try { const items = $items(nodeName); if(Array.isArray(items) && items.length) return items[items.length-1].json || {}; } catch(e) {}\n  return {};\n}\nfunction looksLikePath(k){ return typeof k === 'string' && (k.startsWith('app/') || k.includes('/')); }\nfunction normalizeFiles(payload){\n  if (!payload) return {};\n  if (Array.isArray(payload)) {\n    const out = {};\n    for (const f of payload) if (f && f.path && typeof f.content === 'string') out[String(f.path)] = f.content;\n    return out;\n  }\n  if (payload.files && Array.isArray(payload.files)) return normalizeFiles(payload.files);\n  if (payload.generated_app_source) {\n    const nested = normalizeFiles(payload.generated_app_source);\n    if (Object.keys(nested).length) return nested;\n  }\n  if (typeof payload === 'object') {\n    const out = {};\n    for (const [k,v] of Object.entries(payload)) {\n      if (looksLikePath(k) && typeof v === 'string') out[k] = v;\n      else if (looksLikePath(k) && v && typeof v === 'object' && typeof v.content === 'string') out[k] = v.content;\n    }\n    return out;\n  }\n  return {};\n}\nconst base = lastJson(\"Build Ollama App Logic Prompt\");\nlet payload = parseJson(txt($json));\nif (payload && typeof payload.response === 'string') payload = parseJson(payload.response);\nconst files = normalizeFiles(payload);\nconst required = Array.isArray(base.group_required_files) ? base.group_required_files : [];\nconst missing = required.filter(path => typeof files[path] !== 'string' || files[path].trim().length === 0);\nconst failures = [];\nif (payload.__parse_error) failures.push('ollama_group_json_parse_error:' + (base.ollama_generation_group || 'unknown'));\nif (Object.keys(files).length === 0) failures.push('ollama_group_empty:' + (base.ollama_generation_group || 'unknown'));\nfor (const path of missing) failures.push('ollama_group_missing_required_file:' + path);\nreturn [{ json: {\n  ...base,\n  partial_generated_app_source: files,\n  generated_app_source: { ...($json.generated_app_source || {}), ...files },\n  generation_metadata: payload.generation_metadata || { generated_by:'ollama', group: base.ollama_generation_group, warning:'metadata missing' },\n  runtime_quality_failures: [...($json.runtime_quality_failures || []), ...failures],\n  runtime_quality_warnings: missing.length ? [...($json.runtime_quality_warnings || []), 'Ollama group did not return all required files: ' + missing.join(', ')] : ($json.runtime_quality_warnings || []),\n  ollama_group_raw_preview: payload.__parse_error ? payload.raw : undefined,\n  app_source_generated_by: 'ollama'\n}}];\n"
+      },
+      "id": "8272276b-5f89-4f77-96f5-63d244e70bec",
+      "name": "Parse Ollama App Logic Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15456,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const groupName = \"static web frontend\";\nconst groupRequiredFiles = [\"app/public/index.html\"];\nconst groupRequirements = [\"index.html must be a clean standalone UI in French or simple bilingual labels.\", \"It must call POST /analyze, display macro totals, foods, warnings and raw JSON.\", \"It must not contain nutrition constants or invented nutrition values.\"];\nconst context = {\n  project_name: $json.project_name || 'AI-Workflow-Nutrition',\n  policy: $json.policy || 'Nutrition values must come only from official BLV API. Never add manual nutrient values.',\n  blv_api_base_url: $json.blv_api_base_url || 'https://api.webapp.prod.blv.foodcase-services.com/BLV_WebApp_WS/webresources/BLV-api',\n  blv_search_path: $json.blv_search_path || 'foods',\n  blv_detail_path: $json.blv_detail_path || 'food/:id',\n  user_stories: $json.user_stories || [],\n  architecture: $json.architecture || {},\n  production: $json.production || {},\n  generated_user_story_outputs: $json.generated_user_story_outputs || [],\n  existing_generated_app_source_files: Object.keys($json.generated_app_source || {})\n};\nconst prompt = `You are Ollama, the CODE GENERATION AGENT for AI-Workflow-Nutrition.\nReturn STRICT JSON ONLY. No markdown. No prose outside JSON.\n\nIMPORTANT\nn8n is only the centralized orchestrator. The application code must be generated by you, Ollama.\nGenerate ONLY this file group: ${groupName}.\n\nPROJECT CONTEXT\n${JSON.stringify(context, null, 2)}\n\nFILES TO GENERATE IN THIS CALL\n${groupRequiredFiles.map(f => '- ' + f).join('\\n')}\n\nGROUP REQUIREMENTS\n${groupRequirements.map(r => '- ' + r).join('\\n')}\n\nGLOBAL APP RULES\n- Node/Express + TypeScript app.\n- Use Express, cors, dotenv and native fetch.\n- GET /health must return JSON status ok.\n- POST /analyze must accept {\"raw_meal_input\":\"...\"}.\n- Ollama may parse food names/quantities/units but must NEVER generate nutrition values.\n- All calories, proteins, fat, carbohydrates and micronutrients must come only from the official Swiss BLV API response.\n- BLV config: BLV_SEARCH_PATH=foods and BLV_DETAIL_PATH=food/:id.\n- BLVClient must use query parameter named \"search\".\n- Include cache and human review when candidates are missing or ambiguous.\n- NutritionCalculator must derive totals from official_nutrients only and support ENERCC, PROT625, FAT, CHO plus common fallback codes/names.\n- Do not hardcode nutrition values anywhere.\n\nREQUIRED JSON OUTPUT SHAPE\n{\n  \"generation_metadata\": {\n    \"generated_by\": \"ollama\",\n    \"group\": \"${groupName}\",\n    \"notes\": []\n  },\n  \"files\": [\n    {\"path\":\"app/example.ts\",\"content\":\"full file content\"}\n  ]\n}\n\nJSON RULES\n- Return valid JSON parseable by JSON.parse.\n- Escape newlines inside content strings.\n- Do not use markdown code fences.\n- Include every requested file exactly once.\n- Do not include files from other groups.\n`;\nreturn [{ json: { ...$json, prompt, ollama_generation_group: groupName, group_required_files: groupRequiredFiles, ollama_group_position: \"Build Ollama Frontend Prompt\" } }];"
+      },
+      "id": "dc3d7c61-a0d2-44d0-a144-03462b044f8f",
+      "name": "Build Ollama Frontend Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15744,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3:latest"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{ false }}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "options",
+              "value": "={{ { temperature: 0.03, num_ctx: 8192, num_predict: 12000 } }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "91425d5b-8b8f-4a9e-9f1a-640b140343d5",
+      "name": "Call Ollama Frontend Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        16016,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function txt(i){\n  if(typeof i.response==='string') return i.response;\n  if(typeof i.data==='string') return i.data;\n  if(typeof i.body==='string') return i.body;\n  return JSON.stringify(i || {});\n}\nfunction clean(s){\n  return String(s || '').replace(/^```json\\s*/i,'').replace(/^```\\s*/i,'').replace(/```\\s*$/i,'').trim();\n}\nfunction parseJson(s){\n  const raw = clean(s);\n  try { return JSON.parse(raw); } catch {}\n  const a = raw.indexOf('{'); const b = raw.lastIndexOf('}');\n  if (a >= 0 && b > a) { try { return JSON.parse(raw.slice(a,b+1)); } catch {} }\n  return { __parse_error: true, raw: raw.slice(0, 5000) };\n}\nfunction lastJson(nodeName){\n  try { const items = $items(nodeName); if(Array.isArray(items) && items.length) return items[items.length-1].json || {}; } catch(e) {}\n  return {};\n}\nfunction looksLikePath(k){ return typeof k === 'string' && (k.startsWith('app/') || k.includes('/')); }\nfunction normalizeFiles(payload){\n  if (!payload) return {};\n  if (Array.isArray(payload)) {\n    const out = {};\n    for (const f of payload) if (f && f.path && typeof f.content === 'string') out[String(f.path)] = f.content;\n    return out;\n  }\n  if (payload.files && Array.isArray(payload.files)) return normalizeFiles(payload.files);\n  if (payload.generated_app_source) {\n    const nested = normalizeFiles(payload.generated_app_source);\n    if (Object.keys(nested).length) return nested;\n  }\n  if (typeof payload === 'object') {\n    const out = {};\n    for (const [k,v] of Object.entries(payload)) {\n      if (looksLikePath(k) && typeof v === 'string') out[k] = v;\n      else if (looksLikePath(k) && v && typeof v === 'object' && typeof v.content === 'string') out[k] = v.content;\n    }\n    return out;\n  }\n  return {};\n}\nconst base = lastJson(\"Build Ollama Frontend Prompt\");\nlet payload = parseJson(txt($json));\nif (payload && typeof payload.response === 'string') payload = parseJson(payload.response);\nconst files = normalizeFiles(payload);\nconst required = Array.isArray(base.group_required_files) ? base.group_required_files : [];\nconst missing = required.filter(path => typeof files[path] !== 'string' || files[path].trim().length === 0);\nconst failures = [];\nif (payload.__parse_error) failures.push('ollama_group_json_parse_error:' + (base.ollama_generation_group || 'unknown'));\nif (Object.keys(files).length === 0) failures.push('ollama_group_empty:' + (base.ollama_generation_group || 'unknown'));\nfor (const path of missing) failures.push('ollama_group_missing_required_file:' + path);\nreturn [{ json: {\n  ...base,\n  partial_generated_app_source: files,\n  generated_app_source: { ...($json.generated_app_source || {}), ...files },\n  generation_metadata: payload.generation_metadata || { generated_by:'ollama', group: base.ollama_generation_group, warning:'metadata missing' },\n  runtime_quality_failures: [...($json.runtime_quality_failures || []), ...failures],\n  runtime_quality_warnings: missing.length ? [...($json.runtime_quality_warnings || []), 'Ollama group did not return all required files: ' + missing.join(', ')] : ($json.runtime_quality_warnings || []),\n  ollama_group_raw_preview: payload.__parse_error ? payload.raw : undefined,\n  app_source_generated_by: 'ollama'\n}}];\n"
+      },
+      "id": "d25cc07e-4ded-4d29-bc5b-c339da7a18a4",
+      "name": "Parse Ollama Frontend Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16304,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function lastJson(nodeName){\n  try { const items=$items(nodeName); if(Array.isArray(items) && items.length) return items[items.length-1].json || {}; } catch(e) {}\n  return {};\n}\nconst parseNodes = [\n  'Parse Ollama Config Files',\n  'Parse Ollama Parser BLV Files',\n  'Parse Ollama App Logic Files',\n  'Parse Ollama Frontend Files'\n];\nconst files = {};\nconst failures = [];\nconst warnings = [];\nconst metadata = [];\nlet base = $json || {};\nfor (const node of parseNodes) {\n  const item = lastJson(node);\n  if (Object.keys(item).length) base = { ...base, ...item };\n  const part = item.partial_generated_app_source || item.generated_app_source || {};\n  for (const [path, content] of Object.entries(part)) {\n    if (String(path).startsWith('app/') && typeof content === 'string') files[path] = content;\n  }\n  if (Array.isArray(item.runtime_quality_failures)) failures.push(...item.runtime_quality_failures);\n  if (Array.isArray(item.runtime_quality_warnings)) warnings.push(...item.runtime_quality_warnings);\n  if (item.generation_metadata) metadata.push(item.generation_metadata);\n}\nconst required = [\"app/package.json\", \"app/tsconfig.json\", \"app/.env.example\", \"app/.env\", \"app/README.md\", \"app/public/index.html\", \"app/src/server.ts\", \"app/src/NutritionAnalysisApp.ts\", \"app/src/domain/NormalizedFood.ts\", \"app/src/domain/NutritionTotals.ts\", \"app/src/services/OllamaMealParser.ts\", \"app/src/services/QuantityNormalizer.ts\", \"app/src/services/BLVClient.ts\", \"app/src/services/CandidateReviewer.ts\", \"app/src/services/NutritionCalculator.ts\"];\nconst missing = required.filter(path => typeof files[path] !== 'string' || files[path].trim().length === 0);\nfor (const path of missing) failures.push('ollama_missing_required_file:' + path);\nreturn [{ json: {\n  ...base,\n  generated_app_source: files,\n  generated_app_source_manifest: Object.keys(files).sort(),\n  required_app_files: required,\n  generation_metadata: { generated_by:'ollama', mode:'split_generation_v9_1', groups: metadata },\n  app_source_origin_runtime_quality: 'ollama_split_code_generation',\n  app_source_generated_by: 'ollama',\n  runtime_quality_status: failures.length ? 'fail' : 'pending',\n  runtime_quality_failures: [...new Set(failures)],\n  runtime_quality_warnings: [...new Set(warnings)],\n  fix_attempt: Number(base.fix_attempt || 0),\n  max_fix_attempts: Number(base.max_fix_attempts || 10),\n  runtime_quality_history: Array.isArray(base.runtime_quality_history) ? base.runtime_quality_history : [],\n  runtime_http_history: Array.isArray(base.runtime_http_history) ? base.runtime_http_history : []\n} }];"
+      },
+      "id": "96c85cc5-1a7f-4f27-845a-94a834d6fd0f",
+      "name": "Merge Ollama Generated App Source",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16576,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "content": "04 - Production par user story\tTransforme les user stories en plan de production : process, frontend, backend, tests et fichiers à générer.\n\nGénération code Ollama - Config files\tOllama génère les fichiers de configuration : package.json, tsconfig.json, .env, .env.example, README.\n\nGénération code Ollama - Parser / BLV files\tOllama génère les fichiers liés au parsing, à la normalisation des quantités et au client BLV.\n\nGénération code Ollama - App logic files\tOllama génère la logique principale : review des candidats, calcul nutritionnel, orchestration de l’app et serveur Express.\n\nGénération code Ollama - Frontend files\tOllama génère l’interface web, notamment index.html.\nParse des réponses Ollama\tConvertit les réponses brutes d’Ollama en vrais fichiers exploitables par n8n.\n\nMerge Ollama Generated App Source\tFusionne tous les fichiers générés par Ollama dans un seul objet generated_app_source",
+        "height": 676,
+        "width": 512,
+        "color": 4
+      },
+      "id": "15fc7e62-dc0d-4bc1-bd46-d11cb966a07e",
+      "name": "04 - Production par user story1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        14576,
+        1536
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Global Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Global Context": {
+      "main": [
+        [
+          {
+            "node": "Reset Runtime Loop State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Design Thinking Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Design Thinking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Design Thinking": {
+      "main": [
+        [
+          {
+            "node": "Parse Design Thinking JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Design Thinking JSON": {
+      "main": [
+        [
+          {
+            "node": "Prepare Azure DevOps User Stories Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Architecture Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Architecture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Architecture": {
+      "main": [
+        [
+          {
+            "node": "Parse Architecture JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Architecture JSON": {
+      "main": [
+        [
+          {
+            "node": "Set Production Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Production Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Production",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Production": {
+      "main": [
+        [
+          {
+            "node": "Parse Production JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Production JSON": {
+      "main": [
+        [
+          {
+            "node": "Expand Production By User Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Runtime Quality Test": {
+      "main": [
+        [
+          {
+            "node": "Collapse Runtime Quality Test Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Runtime Quality Passed": {
+      "main": [
+        [
+          {
+            "node": "Create Runtime Before After Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hard Collapse Before Retry Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Can Retry Fix": {
+      "main": [
+        [
+          {
+            "node": "Set Runtime Fix Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Human Review Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Runtime Fix Prompt": {
+      "main": [
+        [
+          {
+            "node": "Hard Collapse Before Fix Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Runtime Fix Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Runtime Fix Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Runtime Fix Plan": {
+      "main": [
+        [
+          {
+            "node": "Apply Safe Runtime Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Safe Runtime Patch": {
+      "main": [
+        [
+          {
+            "node": "Runtime Quality Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Test Improvement Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Test Improvement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Test Improvement": {
+      "main": [
+        [
+          {
+            "node": "Parse Test Improvement JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Test Improvement JSON": {
+      "main": [
+        [
+          {
+            "node": "Set Security Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Security Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Security",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Security": {
+      "main": [
+        [
+          {
+            "node": "Parse Security JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Security JSON": {
+      "main": [
+        [
+          {
+            "node": "Create Security Improvement Backlog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Deployment Maintenance Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Deployment Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Deployment Maintenance": {
+      "main": [
+        [
+          {
+            "node": "Parse Deployment Maintenance JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Deployment Maintenance JSON": {
+      "main": [
+        [
+          {
+            "node": "Create Deployment Maintenance Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Final Package ZIP": {
+      "main": [
+        [
+          {
+            "node": "Validate Final ZIP Contents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Final ZIP Contents": {
+      "main": [
+        [
+          {
+            "node": "FINAL - Download App ZIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Running App HTTP Test": {
+      "main": [
+        [
+          {
+            "node": "Call Running App Analyze",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Running App Analyze": {
+      "main": [
+        [
+          {
+            "node": "Validate Running App HTTP Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Running App HTTP Result": {
+      "main": [
+        [
+          {
+            "node": "Collapse Runtime Validation Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Runtime Before After Report": {
+      "main": [
+        [
+          {
+            "node": "Create User Story Conformity Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Runtime Quality Test Input": {
+      "main": [
+        [
+          {
+            "node": "Prepare Running App HTTP Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Runtime Validation Items": {
+      "main": [
+        [
+          {
+            "node": "IF Runtime Quality Passed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hard Collapse Before Retry Gate": {
+      "main": [
+        [
+          {
+            "node": "Global Runtime Fix Attempt Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hard Collapse Before Fix Agent": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Runtime Fix Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Runtime Loop State": {
+      "main": [
+        [
+          {
+            "node": "Set Design Thinking Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Global Runtime Fix Attempt Guard": {
+      "main": [
+        [
+          {
+            "node": "IF Can Retry Fix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Human Review Report": {
+      "main": [
+        [
+          {
+            "node": "Create User Story Conformity Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Azure DevOps User Stories Payload": {
+      "main": [
+        [
+          {
+            "node": "Set Architecture Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Production By User Story": {
+      "main": [
+        [
+          {
+            "node": "Build Ollama Config Files Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create User Story Conformity Report": {
+      "main": [
+        [
+          {
+            "node": "Set Test Improvement Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Security Improvement Backlog": {
+      "main": [
+        [
+          {
+            "node": "Set Deployment Maintenance Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deployment Maintenance Report": {
+      "main": [
+        [
+          {
+            "node": "Generate Final Package ZIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Ollama Config Files Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Config Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Config Files": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama Config Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ollama Config Files": {
+      "main": [
+        [
+          {
+            "node": "Build Ollama Parser BLV Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Ollama Parser BLV Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Parser BLV Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Parser BLV Files": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama Parser BLV Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ollama Parser BLV Files": {
+      "main": [
+        [
+          {
+            "node": "Build Ollama App Logic Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Ollama App Logic Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama App Logic Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama App Logic Files": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama App Logic Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ollama App Logic Files": {
+      "main": [
+        [
+          {
+            "node": "Build Ollama Frontend Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Ollama Frontend Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama Frontend Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama Frontend Files": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama Frontend Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ollama Frontend Files": {
+      "main": [
+        [
+          {
+            "node": "Merge Ollama Generated App Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Ollama Generated App Source": {
+      "main": [
+        [
+          {
+            "node": "Runtime Quality Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2d775a21-0097-48d7-a301-4ba1d0a7914a",
+  "meta": {
+    "instanceId": "dd95549d57f7481b72d62761de825a84dfc9d9cb0682ecb22f3ed237390dc3d3"
+  },
+  "id": "TSXZrdUue9FSIwrK",
+  "tags": []
+}
